@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: timetracker-mcp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: timetracker-mcp
+      POSTGRES_PASSWORD: timetracker-mcp
+      POSTGRES_DB: timetracker-mcp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    labels:
+      - "com.docker.compose.project=timetracker-mcp"
+
+volumes:
+  postgres_data:
+    name: timetracker-mcp-postgres-data
