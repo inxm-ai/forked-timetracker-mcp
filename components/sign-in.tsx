@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 import { signIn } from "@/lib/authClient";
 import Link from "next/link";
+import { Separator } from "@/components/ui/separator";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -16,9 +17,55 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [externalAuthMode, setExternalAuthMode] = useState<string | null>(null);
+  const [externalAuthProvider, setExternalAuthProvider] = useState<string | null>(null);
+
+  // Check if external auth is enabled
+  useEffect(() => {
+    async function checkExternalAuth() {
+      try {
+        const response = await fetch('/api/auth/external/config');
+        if (response.ok) {
+          const data = await response.json();
+          setExternalAuthMode(data.mode);
+          setExternalAuthProvider(data.provider);
+        }
+      } catch (err) {
+        console.error('Failed to fetch external auth config:', err);
+      }
+    }
+    checkExternalAuth();
+  }, []);
 
   const isFormValid = () => {
     return email.trim() !== '' && password.trim() !== '';
+  };
+
+  const handleOAuthSignIn = async (provider: string) => {
+    try {
+      await signIn.social({
+        provider: provider as any,
+        callbackURL: '/dashboard',
+      });
+    } catch (err) {
+      console.error('OAuth sign-in error:', err);
+      setError('Failed to sign in with ' + provider);
+    }
+  };
+
+  const getProviderDisplayName = (provider: string) => {
+    switch (provider) {
+      case 'google': return 'Google';
+      case 'github': return 'GitHub';
+      case 'entra': return 'Microsoft';
+      case 'microsoftEntraId': return 'Microsoft';
+      default: return provider;
+    }
+  };
+
+  const getProviderIcon = (provider: string) => {
+    // You can add custom icons here if needed
+    return null;
   };
 
   return (
@@ -38,6 +85,32 @@ export default function SignIn() {
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
+          )}
+
+          {/* OAuth Sign-In Buttons */}
+          {externalAuthMode === 'better-auth' && externalAuthProvider && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 border-muted-foreground/20 hover:bg-muted/50 transition-colors"
+                onClick={() => handleOAuthSignIn(externalAuthProvider)}
+              >
+                {getProviderIcon(externalAuthProvider)}
+                <span>Continue with {getProviderDisplayName(externalAuthProvider)}</span>
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-gray-950 px-2 text-muted-foreground">
+                    Or continue with email
+                  </span>
+                </div>
+              </div>
+            </>
           )}
           
           <div className="space-y-2">
