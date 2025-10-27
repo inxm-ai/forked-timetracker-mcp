@@ -17,6 +17,86 @@ export const env = createEnv({
       .optional()
       .default("your-secret-key-at-least-32-characters-long"),
     
+    // External Authentication Configuration
+    EXTERNAL_AUTH_MODE: z
+      .enum(["better-auth", "proxy", "disabled"])
+      .optional()
+      .default("disabled")
+      .describe("External authentication mode: better-auth (OAuth via Better Auth), proxy (OAuth proxy with signed headers), or disabled"),
+
+    EXTERNAL_AUTH_PROVIDER: z
+      .enum(["google", "github", "entra", "custom"])
+      .optional()
+      .describe("External OAuth provider when using better-auth mode"),
+
+    // OAuth Provider Configuration (for better-auth mode)
+    OAUTH_GOOGLE_CLIENT_ID: z.string().optional(),
+    OAUTH_GOOGLE_CLIENT_SECRET: z.string().optional(),
+    OAUTH_GITHUB_CLIENT_ID: z.string().optional(),
+    OAUTH_GITHUB_CLIENT_SECRET: z.string().optional(),
+    OAUTH_ENTRA_CLIENT_ID: z.string().optional(),
+    OAUTH_ENTRA_CLIENT_SECRET: z.string().optional(),
+    OAUTH_ENTRA_TENANT_ID: z.string().optional(),
+    OAUTH_CUSTOM_AUTHORIZATION_URL: z.string().url().optional(),
+    OAUTH_CUSTOM_TOKEN_URL: z.string().url().optional(),
+    OAUTH_CUSTOM_USERINFO_URL: z.string().url().optional(),
+    OAUTH_CUSTOM_CLIENT_ID: z.string().optional(),
+    OAUTH_CUSTOM_CLIENT_SECRET: z.string().optional(),
+
+    // OAuth Proxy Configuration (for proxy mode)
+    PROXY_USER_HEADER: z
+      .string()
+      .optional()
+      .default("x-auth-request-user")
+      .describe("Header containing authenticated user info from proxy"),
+
+    PROXY_EMAIL_HEADER: z
+      .string()
+      .optional()
+      .default("x-auth-request-email")
+      .describe("Header containing user email from proxy"),
+
+    PROXY_JWT_HEADER: z
+      .string()
+      .optional()
+      .default("x-auth-request-jwt")
+      .describe("Header containing signed JWT from proxy"),
+
+    PROXY_JWT_JWKS_URL: z
+      .string()
+      .url()
+      .optional()
+      .describe("JWKS URL to verify JWT signatures from proxy"),
+
+    PROXY_JWT_PUBLIC_KEY: z
+      .string()
+      .optional()
+      .describe("Public key (PEM format) to verify JWT signatures from proxy"),
+
+    PROXY_JWT_ISSUER: z
+      .string()
+      .optional()
+      .describe("Expected JWT issuer claim for validation"),
+
+    PROXY_JWT_AUDIENCE: z
+      .string()
+      .optional()
+      .describe("Expected JWT audience claim for validation"),
+
+    // External Auth Policies
+    EXTERNAL_CREATE_LOCAL_USER: z
+      .enum(["true", "false"])
+      .optional()
+      .default("true")
+      .transform((val) => val === "true")
+      .describe("Automatically create local user on first external login"),
+
+    EXTERNAL_LINKING_POLICY: z
+      .enum(["auto", "require-manual-link"])
+      .optional()
+      .default("auto")
+      .describe("Policy for linking external accounts: auto (by email) or require-manual-link"),
+
     // Email Service (Optional)
     LOOPS_API_KEY: z
       .string()
@@ -104,6 +184,38 @@ export const env = createEnv({
     // Server-side
     DATABASE_URL: process.env.DATABASE_URL,
     AUTH_SECRET: process.env.AUTH_SECRET,
+
+    // External Auth
+    EXTERNAL_AUTH_MODE: process.env.EXTERNAL_AUTH_MODE,
+    EXTERNAL_AUTH_PROVIDER: process.env.EXTERNAL_AUTH_PROVIDER,
+
+    // OAuth Providers
+    OAUTH_GOOGLE_CLIENT_ID: process.env.OAUTH_GOOGLE_CLIENT_ID,
+    OAUTH_GOOGLE_CLIENT_SECRET: process.env.OAUTH_GOOGLE_CLIENT_SECRET,
+    OAUTH_GITHUB_CLIENT_ID: process.env.OAUTH_GITHUB_CLIENT_ID,
+    OAUTH_GITHUB_CLIENT_SECRET: process.env.OAUTH_GITHUB_CLIENT_SECRET,
+    OAUTH_ENTRA_CLIENT_ID: process.env.OAUTH_ENTRA_CLIENT_ID,
+    OAUTH_ENTRA_CLIENT_SECRET: process.env.OAUTH_ENTRA_CLIENT_SECRET,
+    OAUTH_ENTRA_TENANT_ID: process.env.OAUTH_ENTRA_TENANT_ID,
+    OAUTH_CUSTOM_AUTHORIZATION_URL: process.env.OAUTH_CUSTOM_AUTHORIZATION_URL,
+    OAUTH_CUSTOM_TOKEN_URL: process.env.OAUTH_CUSTOM_TOKEN_URL,
+    OAUTH_CUSTOM_USERINFO_URL: process.env.OAUTH_CUSTOM_USERINFO_URL,
+    OAUTH_CUSTOM_CLIENT_ID: process.env.OAUTH_CUSTOM_CLIENT_ID,
+    OAUTH_CUSTOM_CLIENT_SECRET: process.env.OAUTH_CUSTOM_CLIENT_SECRET,
+
+    // Proxy Headers
+    PROXY_USER_HEADER: process.env.PROXY_USER_HEADER,
+    PROXY_EMAIL_HEADER: process.env.PROXY_EMAIL_HEADER,
+    PROXY_JWT_HEADER: process.env.PROXY_JWT_HEADER,
+    PROXY_JWT_JWKS_URL: process.env.PROXY_JWT_JWKS_URL,
+    PROXY_JWT_PUBLIC_KEY: process.env.PROXY_JWT_PUBLIC_KEY,
+    PROXY_JWT_ISSUER: process.env.PROXY_JWT_ISSUER,
+    PROXY_JWT_AUDIENCE: process.env.PROXY_JWT_AUDIENCE,
+
+    // External Auth Policies
+    EXTERNAL_CREATE_LOCAL_USER: process.env.EXTERNAL_CREATE_LOCAL_USER,
+    EXTERNAL_LINKING_POLICY: process.env.EXTERNAL_LINKING_POLICY,
+
     LOOPS_API_KEY: process.env.LOOPS_API_KEY,
     LOOPS_EMAIL_VERIFICATION_TEMPLATE_ID: process.env.LOOPS_EMAIL_VERIFICATION_TEMPLATE_ID,
     ENABLE_EMAIL_VERIFICATION: process.env.ENABLE_EMAIL_VERIFICATION,

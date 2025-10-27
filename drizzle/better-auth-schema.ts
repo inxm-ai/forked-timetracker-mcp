@@ -11,7 +11,11 @@ export const user = pgTable("user", {
  role: text('role'),
  banned: boolean('banned'),
  banReason: text('ban_reason'),
- banExpires: timestamp('ban_expires')
+ banExpires: timestamp('ban_expires'),
+ // External auth fields for OAuth proxy and external identity providers
+ externalProvider: text('external_provider'), // e.g., 'google', 'github', 'entra', 'custom'
+ externalId: text('external_id'), // The 'sub' claim from external provider
+ externalEmail: text('external_email') // Email from external provider
 				});
 
 export const session = pgTable("session", {
