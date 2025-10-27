@@ -130,6 +130,18 @@ export const env = createEnv({
       .optional()
       .default("test-user-123")
       .describe("User ID for database seeding in development"),
+
+    // MCP API token to allow non-OAuth clients to list/use tools
+    MCP_API_KEY: z
+      .string()
+      .optional()
+      .describe("Optional API key that can be used by trusted MCP clients to authenticate without OAuth"),
+
+    // Optional user id to associate with requests authenticated via MCP_API_KEY
+    MCP_API_USER_ID: z
+      .string()
+      .optional()
+      .describe("When MCP_API_KEY is used, associate requests with this local user ID"),
     
     // Vercel Environment Variables (automatically set by Vercel)
     VERCEL_PROJECT_PRODUCTION_URL: z
@@ -221,6 +233,8 @@ export const env = createEnv({
     ENABLE_EMAIL_VERIFICATION: process.env.ENABLE_EMAIL_VERIFICATION,
     REDIS_URL: process.env.REDIS_URL,
     SEED_USER_ID: process.env.SEED_USER_ID,
+    MCP_API_KEY: process.env.MCP_API_KEY,
+    MCP_API_USER_ID: process.env.MCP_API_USER_ID,
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
     VERCEL_BRANCH_URL: process.env.VERCEL_BRANCH_URL,
     VERCEL_URL: process.env.VERCEL_URL,

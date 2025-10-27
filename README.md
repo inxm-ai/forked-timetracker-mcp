@@ -232,6 +232,26 @@ OAUTH_GOOGLE_CLIENT_SECRET=your-client-secret
 | `LOOPS_API_KEY` | Loops.js API key (required if email verification is enabled) | Not set |
 | `LOOPS_EMAIL_VERIFICATION_TEMPLATE_ID` | Custom email template ID for verification emails | Uses default template |
 
+### MCP API Key (non-OAuth access)
+
+You can optionally expose the MCP tools to trusted clients using a static API key instead of the OAuth flow. This is useful for server-to-server integrations or when you control the client environment and cannot perform OAuth.
+
+Environment variables:
+
+- `MCP_API_KEY` — the secret token that your client will send.
+- `MCP_API_USER_ID` — (optional) local user id to associate requests authenticated with `MCP_API_KEY`. If not provided the server falls back to `SEED_USER_ID` or a generic `service-user` id.
+
+How to send the key:
+
+- Header: `x-api-key: <your-key>`
+- Or: `Authorization: Bearer <your-key>`
+
+Security notes:
+
+- Treat `MCP_API_KEY` like any other secret. Do not commit it to repos or expose it in client-side code.
+- For production consider rotating keys, using per-client keys, IP allowlists, short-lived tokens, or DB-backed API keys with create/delete endpoints.
+
+
 > **Note**  You can create a free Postgres database on [Neon](https://neon.tech) and a free Redis database on [Upstash](https://upstash.com).  Redis is optional, but recommended for production use.
 
 ## Optional Features
