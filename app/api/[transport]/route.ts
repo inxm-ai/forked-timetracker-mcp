@@ -1,5 +1,9 @@
 import { auth } from "@/lib/auth";
 import { createMcpHandler } from "@vercel/mcp-adapter";
+
+// Tricking typescript into exporting the correct types
+type McpRegisterFn = Parameters<typeof createMcpHandler>[0];
+type McpServer = Parameters<McpRegisterFn>[0];
 import { withMcpAuth } from "better-auth/plugins";
 import { env } from "@/lib/env";
 
@@ -30,7 +34,7 @@ import {
 } from "@/lib/mcp-tools/report-tools";
 
 // Helper that registers all tools for a given userId onto the MCP server
-function registerToolsForUser(server: any, userId: string) {
+function registerToolsForUser(server: McpServer, userId: string) {
 	// Client management tools
 	server.tool(
 		createClientTool.name,
@@ -196,7 +200,7 @@ function createHandlerForUser(userId: string) {
 }
 
 // Universal handler that accepts either API key auth or falls back to OAuth via withMcpAuth
-const universalHandler = async (req: any) => {
+const universalHandler = async (req: Request) => {
 	// First: check for API key header
 	const headerKey = (req.headers.get && (req.headers.get('x-api-key') || req.headers.get('authorization'))) || null;
 	if (headerKey) {
