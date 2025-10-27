@@ -29,6 +29,7 @@ A **conversational-first time tracking platform** built on the **Model Context P
 - **Multi-User with Shared Resources** — individual time tracking with shared clients and projects for seamless team collaboration.
 - **Data Integrity Protection** — clients and projects with tracked time cannot be deactivated, preserving historical data.
 - **Patched Authentication** — uses [Better Auth](https://github.com/better-auth/better-auth) with our patch ([PR #3091](https://github.com/better-auth/better-auth/pull/3091)) adding enhanced PKCE support described in `docs/better-auth-patch.md`.
+- **External OAuth Support** — integrate Google, GitHub, Microsoft Entra ID, or custom OAuth/OIDC providers; supports OAuth proxy mode for enterprise deployments. See [External Auth Guide](docs/EXTERNAL_AUTH.md).
 - **Open User Registration** — by default, anyone can create an account through the signup page at `/app/signup`.
 - **Optional Email Verification** — secure user registration with email verification via [Loops.js](https://loops.so) (optional feature).
 - **Dark/Light Theme** — implemented with `next-themes` & CSS variables.
@@ -201,6 +202,27 @@ By default, email verification is disabled (`ENABLE_EMAIL_VERIFICATION=false` in
    ```
 
 For more details on authentication configuration options, refer to the [Better Auth documentation](https://www.better-auth.com/docs/reference/options).
+
+### External OAuth Authentication
+
+TimeTracker MCP supports external OAuth/OIDC authentication providers through two modes:
+
+1. **Better Auth Integration** — OAuth providers (Google, GitHub, Microsoft Entra ID, custom OIDC) integrated directly
+2. **OAuth Proxy Mode** — Use an external OAuth proxy with signed JWT headers for enterprise deployments
+3. **Disabled** — Default mode with email/password only
+
+For complete configuration instructions, see **[External Authentication Guide](docs/EXTERNAL_AUTH.md)**.
+
+Quick configuration:
+```bash
+# Enable external auth
+EXTERNAL_AUTH_MODE=better-auth  # or "proxy" or "disabled"
+
+# For Better Auth mode - configure OAuth provider
+EXTERNAL_AUTH_PROVIDER=google
+OAUTH_GOOGLE_CLIENT_ID=your-client-id
+OAUTH_GOOGLE_CLIENT_SECRET=your-client-secret
+```
 
 ### Optional Environment Variables
 | Variable | Description | Default |
