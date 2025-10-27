@@ -44,7 +44,7 @@ export default function SignIn() {
   const handleOAuthSignIn = async (provider: string) => {
     try {
       await signIn.social({
-        provider: provider as any,
+        provider: provider,
         callbackURL: '/dashboard',
       });
     } catch (err) {

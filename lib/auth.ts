@@ -26,7 +26,7 @@ function getExternalAuthProviders() {
   }
 
   const provider = env.EXTERNAL_AUTH_PROVIDER;
-  const socialProviders: Record<string, any> = {};
+  const socialProviders: Record<string, { clientId: string, clientSecret: string, tenantId?: string }> = {};
 
   switch (provider) {
     case 'google':
