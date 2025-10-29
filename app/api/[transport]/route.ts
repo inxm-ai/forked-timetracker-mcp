@@ -36,6 +36,7 @@ import {
 	getTimeSummaryTool,
 	calculateEarningsTool,
 } from "@/lib/mcp-tools/report-tools";
+import { NextRequest } from "next/server";
 
 // Helper that registers all tools for a given userId and role onto the MCP server
 function registerToolsForUser(server: McpServer, userId: string, userRole?: string | null) {
@@ -229,7 +230,7 @@ const universalHandler = async (req: Request) => {
 	const externalAuthMode = getExternalAuthMode();
 	if (externalAuthMode === 'proxy') {
 		try {
-			const proxyAuth = await authenticateViaProxy(req as any);
+			const proxyAuth = await authenticateViaProxy(req as NextRequest);
 			if (proxyAuth.success && proxyAuth.userId) {
 				// Extract role from JWT or fetch from database
 				let userRole = proxyAuth.userInfo?.role || 
