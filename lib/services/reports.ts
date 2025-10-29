@@ -1,14 +1,35 @@
 import { db } from "@/drizzle/connection";
 import { timeEntries, projects } from "@/drizzle/schema";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql, inArray } from "drizzle-orm";
 
-export async function getDashboardSummary(userId: string) {
-  console.log('getDashboardSummary called for userId:', userId);
+/**
+ * Options for report queries that support viewing other users' data
+ */
+export interface ReportQueryOptions {
+  /** The user ID to query. If not provided, uses the authenticated user's ID */
+  targetUserId?: string;
+  /** Array of user IDs to query (for multi-user reports). Takes precedence over targetUserId */
+  targetUserIds?: string[];
+}
+
+/**
+ * Get dashboard summary for a user
+ * @param userId - The authenticated user's ID (for authorization context)
+ * @param options - Optional query options to view other users' data
+ */
+export async function getDashboardSummary(
+  userId: string, 
+  options?: ReportQueryOptions
+) {
+  // Determine which user(s) to query
+  const queryUserId = options?.targetUserId || userId;
+  
+  console.log('getDashboardSummary called for userId:', userId, 'queryUserId:', queryUserId);
   
   const [last] = await db
     .select({ last: timeEntries.startTime })
     .from(timeEntries)
-    .where(and(eq(timeEntries.userId, userId)))
+    .where(and(eq(timeEntries.userId, queryUserId)))
     .orderBy(sql`start_time DESC`)
     .limit(1);
 
@@ -25,7 +46,7 @@ export async function getDashboardSummary(userId: string) {
     .from(timeEntries)
     .where(
       and(
-        eq(timeEntries.userId, userId),
+        eq(timeEntries.userId, queryUserId),
         lte(timeEntries.startTime, new Date()),
         gte(timeEntries.startTime, startOfMonth),
         sql` ${timeEntries.durationMinutes} IS NOT NULL`
@@ -46,7 +67,7 @@ export async function getDashboardSummary(userId: string) {
     .from(timeEntries)
     .where(
       and(
-        eq(timeEntries.userId, userId),
+        eq(timeEntries.userId, queryUserId),
         gte(timeEntries.startTime, startOfWeek),
         sql` ${timeEntries.durationMinutes} IS NOT NULL`
       )
@@ -66,7 +87,7 @@ export async function getDashboardSummary(userId: string) {
     .from(timeEntries)
     .where(
       and(
-        eq(timeEntries.userId, userId),
+        eq(timeEntries.userId, queryUserId),
         gte(timeEntries.startTime, startOfPrevWeek),
         lte(timeEntries.startTime, endOfPrevWeek),
         sql` ${timeEntries.durationMinutes} IS NOT NULL`
@@ -104,14 +125,37 @@ export async function getDashboardSummary(userId: string) {
   return result;
 }
 
-export async function getDailyHours(userId: string, days: number = 14) {
-  console.log('getDailyHours called for userId:', userId, 'days:', days);
+/**
+ * Get daily hours for a user or multiple users
+ * @param userId - The authenticated user's ID (for authorization context)
+ * @param days - Number of days to retrieve
+ * @param options - Optional query options to view other users' data
+ */
+export async function getDailyHours(
+  userId: string, 
+  days: number = 14,
+  options?: ReportQueryOptions
+) {
+  console.log('getDailyHours called for userId:', userId, 'days:', days, 'options:', options);
   
   const since = new Date();
   since.setDate(since.getDate() - days + 1);
   since.setHours(0, 0, 0, 0);
 
   console.log('Querying daily hours since:', since);
+
+  // Build user filter condition
+  let userCondition;
+  if (options?.targetUserIds && options.targetUserIds.length > 0) {
+    // Query multiple users
+    userCondition = inArray(timeEntries.userId, options.targetUserIds);
+  } else if (options?.targetUserId) {
+    // Query specific user
+    userCondition = eq(timeEntries.userId, options.targetUserId);
+  } else {
+    // Default to authenticated user
+    userCondition = eq(timeEntries.userId, userId);
+  }
 
   const rows = await db
     .select({
@@ -121,7 +165,7 @@ export async function getDailyHours(userId: string, days: number = 14) {
     .from(timeEntries)
     .where(
       and(
-        eq(timeEntries.userId, userId),
+        userCondition,
         gte(timeEntries.startTime, since),
         sql` ${timeEntries.durationMinutes} IS NOT NULL`
       )
@@ -133,14 +177,35 @@ export async function getDailyHours(userId: string, days: number = 14) {
   return rows;
 }
 
-export async function getHoursByProjectCurrentMonth(userId: string) {
-  console.log('getHoursByProjectCurrentMonth called for userId:', userId);
+/**
+ * Get hours by project for current month
+ * @param userId - The authenticated user's ID (for authorization context)
+ * @param options - Optional query options to view other users' data
+ */
+export async function getHoursByProjectCurrentMonth(
+  userId: string,
+  options?: ReportQueryOptions
+) {
+  console.log('getHoursByProjectCurrentMonth called for userId:', userId, 'options:', options);
   
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
   console.log('Querying hours by project since:', startOfMonth);
+
+  // Build user filter condition
+  let userCondition;
+  if (options?.targetUserIds && options.targetUserIds.length > 0) {
+    // Query multiple users
+    userCondition = inArray(timeEntries.userId, options.targetUserIds);
+  } else if (options?.targetUserId) {
+    // Query specific user
+    userCondition = eq(timeEntries.userId, options.targetUserId);
+  } else {
+    // Default to authenticated user
+    userCondition = eq(timeEntries.userId, userId);
+  }
 
   const rows = await db
     .select({
@@ -152,7 +217,7 @@ export async function getHoursByProjectCurrentMonth(userId: string) {
     .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .where(
       and(
-        eq(timeEntries.userId, userId),
+        userCondition,
         gte(timeEntries.startTime, startOfMonth),
         sql` ${timeEntries.durationMinutes} IS NOT NULL`
       )
@@ -163,11 +228,34 @@ export async function getHoursByProjectCurrentMonth(userId: string) {
   return rows;
 }
 
-export async function getMonthlyBilledHours(userId: string, months: number = 6) {
+/**
+ * Get monthly billed hours
+ * @param userId - The authenticated user's ID (for authorization context)
+ * @param months - Number of months to retrieve
+ * @param options - Optional query options to view other users' data
+ */
+export async function getMonthlyBilledHours(
+  userId: string, 
+  months: number = 6,
+  options?: ReportQueryOptions
+) {
   const since = new Date();
   since.setMonth(since.getMonth() - (months - 1));
   since.setDate(1);
   since.setHours(0, 0, 0, 0);
+
+  // Build user filter condition
+  let userCondition;
+  if (options?.targetUserIds && options.targetUserIds.length > 0) {
+    // Query multiple users
+    userCondition = inArray(timeEntries.userId, options.targetUserIds);
+  } else if (options?.targetUserId) {
+    // Query specific user
+    userCondition = eq(timeEntries.userId, options.targetUserId);
+  } else {
+    // Default to authenticated user
+    userCondition = eq(timeEntries.userId, userId);
+  }
 
   const rows = await db
     .select({
@@ -177,7 +265,7 @@ export async function getMonthlyBilledHours(userId: string, months: number = 6) 
     .from(timeEntries)
     .where(
       and(
-        eq(timeEntries.userId, userId),
+        userCondition,
         gte(timeEntries.startTime, since),
         sql` ${timeEntries.durationMinutes} IS NOT NULL`
       )

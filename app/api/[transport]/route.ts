@@ -7,6 +7,9 @@ type McpServer = Parameters<McpRegisterFn>[0];
 import { withMcpAuth } from "better-auth/plugins";
 import { env } from "@/lib/env";
 import { getExternalAuthMode, authenticateViaProxy } from "@/lib/external-auth";
+import { db } from "@/drizzle/connection";
+import { user as userTable } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // Import MCP tools
 import {
@@ -34,8 +37,12 @@ import {
 	calculateEarningsTool,
 } from "@/lib/mcp-tools/report-tools";
 
-// Helper that registers all tools for a given userId onto the MCP server
-function registerToolsForUser(server: McpServer, userId: string) {
+// Helper that registers all tools for a given userId and role onto the MCP server
+function registerToolsForUser(server: McpServer, userId: string, userRole?: string | null) {
+	// Pass role to tools that need it for authorization
+	// For now, tools receive userId; they can fetch role if needed
+	// In the future, we can pass role directly to tool handlers
+	
 	// Client management tools
 	server.tool(
 		createClientTool.name,
@@ -184,10 +191,10 @@ const capabilities = {
 	},
 };
 
-// Create an MCP handler for a given local userId
-function createHandlerForUser(userId: string) {
+// Create an MCP handler for a given local userId and role
+function createHandlerForUser(userId: string, userRole?: string | null) {
 	return createMcpHandler(
-		(server) => registerToolsForUser(server, userId),
+		(server) => registerToolsForUser(server, userId, userRole),
 		{
 			...capabilities,
 		},
@@ -212,7 +219,8 @@ const universalHandler = async (req: Request) => {
 
 		if (env.MCP_API_KEY && keyValue === env.MCP_API_KEY) {
 			const userId = env.MCP_API_USER_ID || env.SEED_USER_ID || 'service-user';
-			const handler = createHandlerForUser(userId);
+			// API key users get admin role by default
+			const handler = createHandlerForUser(userId, 'admin');
 			return handler(req);
 		}
 	}
@@ -223,7 +231,23 @@ const universalHandler = async (req: Request) => {
 		try {
 			const proxyAuth = await authenticateViaProxy(req as any);
 			if (proxyAuth.success && proxyAuth.userId) {
-				const handler = createHandlerForUser(proxyAuth.userId);
+				// Extract role from JWT or fetch from database
+				let userRole = proxyAuth.userInfo?.role || 
+				              (proxyAuth.userInfo?.roles && proxyAuth.userInfo.roles.length > 0 
+				                ? proxyAuth.userInfo.roles[0] 
+				                : null);
+				
+				// If no role from JWT, fetch from database
+				if (!userRole) {
+					const [user] = await db
+						.select({ role: userTable.role })
+						.from(userTable)
+						.where(eq(userTable.id, proxyAuth.userId))
+						.limit(1);
+					userRole = user?.role || null;
+				}
+				
+				const handler = createHandlerForUser(proxyAuth.userId, userRole);
 				return handler(req);
 			}
 			// If proxy auth fails, log and fall through to Better Auth
@@ -234,13 +258,21 @@ const universalHandler = async (req: Request) => {
 	}
 
 	// Fallback to normal OAuth/session-based auth
-	return withMcpAuth(auth, (req, session) => {
+	return withMcpAuth(auth, async (req, session) => {
 		const userId = session.userId;
 		if (!userId) {
 			throw new Error('User ID not available in session');
 		}
 
-		const handler = createHandlerForUser(userId);
+		// Fetch user role from database for Better Auth sessions
+		const [user] = await db
+			.select({ role: userTable.role })
+			.from(userTable)
+			.where(eq(userTable.id, userId))
+			.limit(1);
+		
+		const userRole = user?.role || null;
+		const handler = createHandlerForUser(userId, userRole);
 		return handler(req);
 	})(req);
 };

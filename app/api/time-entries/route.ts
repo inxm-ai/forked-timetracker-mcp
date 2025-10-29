@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
-import { getUserIdOrThrow } from "@/lib/authUtils";
+import { getAuthenticatedUser } from "@/lib/authUtils";
 import { db } from "@/drizzle/connection";
 import { timeEntries, projects, clients } from "@/drizzle/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { createAuthorizationContext, canViewAllTimesheets, canViewUserTimesheets } from "@/lib/authorization";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await getUserIdOrThrow(req);
+    const user = await getAuthenticatedUser(req);
     const { searchParams } = new URL(req.url!);
     const page = Number(searchParams.get("page")) || 1;
     const limit = Number(searchParams.get("limit")) || 10;
@@ -24,13 +25,46 @@ export async function GET(req: NextRequest) {
     // Build WHERE conditions
     const conditions = [];
     
-    // User filter logic
+    // User filter logic with authorization
     if (userFilter === "all") {
-      // If "all" is specified, don't filter by user (admin/superuser view)
-      // Note: In production, you'd want to check if the current user has admin permissions
+      // Check if user has permission to view all timesheets
+      const authContext = createAuthorizationContext(user.userId, user.role);
+      const authResult = canViewAllTimesheets(authContext);
+      
+      if (!authResult.authorized) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden', reason: authResult.reason }), 
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      // Don't add user filter - show all users
     } else if (userFilter) {
       // Filter by specific user IDs using OR logic
       const userIds = userFilter.split(',').map(id => id.trim()).filter(Boolean);
+      
+      // Check authorization for each requested user
+      if (userIds.some(id => id !== user.userId)) {
+        const authContext = createAuthorizationContext(user.userId, user.role);
+        
+        // Check if user can view all timesheets (HR/Admin)
+        const canViewAll = canViewAllTimesheets(authContext);
+        
+        if (!canViewAll.authorized) {
+          // Check each user individually (for Manager role)
+          for (const targetId of userIds) {
+            if (targetId === user.userId) continue; // Can always view own data
+            
+            const authResult = canViewUserTimesheets(authContext, targetId);
+            if (!authResult.authorized) {
+              return new Response(
+                JSON.stringify({ error: 'Forbidden', reason: authResult.reason }), 
+                { status: 403, headers: { 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+        }
+      }
+      
       if (userIds.length === 1) {
         conditions.push(eq(timeEntries.userId, userIds[0]));
       } else if (userIds.length > 1) {
@@ -39,7 +73,7 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // Default: show only current user's entries
-      conditions.push(eq(timeEntries.userId, userId));
+      conditions.push(eq(timeEntries.userId, user.userId));
     }
     
     // Search filter
@@ -130,7 +164,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserIdOrThrow(req);
+    const user = await getAuthenticatedUser(req);
     const body = await req.json();
     const { projectId, description = "" } = body;
 
@@ -144,7 +178,7 @@ export async function POST(req: NextRequest) {
       .from(timeEntries)
       .where(
         and(
-          eq(timeEntries.userId, userId),
+          eq(timeEntries.userId, user.userId),
           eq(timeEntries.isActive, true)
         )
       )
@@ -174,7 +208,7 @@ export async function POST(req: NextRequest) {
       .insert(timeEntries)
       .values({
         id: timeEntryId,
-        userId,
+        userId: user.userId,
         projectId,
         description,
         startTime: new Date(),

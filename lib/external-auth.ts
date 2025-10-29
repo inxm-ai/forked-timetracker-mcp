@@ -21,6 +21,8 @@ export interface ExternalUserInfo {
     name?: string;
     provider: string; // 'google', 'github', 'entra', 'custom'
     picture?: string;
+    role?: string; // User role from JWT (e.g., 'hr', 'manager', 'admin')
+    roles?: string[]; // Alternative: array of roles from JWT
 }
 
 /**
@@ -67,12 +69,19 @@ export async function verifyProxyJWT(jwt: string): Promise<ExternalAuthResult> {
             return { success: false, error: 'JWT expired' };
         }
 
+        // Extract role information from JWT claims
+        // Support multiple common JWT claim names for roles
+        const role = payload.role || payload.userRole || payload['custom:role'];
+        const roles = payload.roles || payload.groups || payload['custom:roles'];
+
         const userInfo: ExternalUserInfo = {
             sub: payload.sub,
             email: payload.email,
             name: payload.name,
             provider: payload.provider || env.EXTERNAL_AUTH_PROVIDER || 'custom',
-            picture: payload.picture
+            picture: payload.picture,
+            role: role, // Single role claim
+            roles: roles // Array of roles/groups claim
         };
 
         return { success: true, userInfo };
@@ -104,6 +113,10 @@ export async function extractProxyUserInfo(req: NextRequest): Promise<ExternalAu
     // Fallback to plain headers (only if JWT is not present or failed)
     const email = req.headers.get(PROXY_EMAIL_HEADER);
     const username = req.headers.get(PROXY_USER_HEADER);
+    
+    // Try to get role from headers as well (some proxies support this)
+    const roleHeader = req.headers.get('X-Auth-Role') || req.headers.get('X-User-Role');
+    const rolesHeader = req.headers.get('X-Auth-Roles') || req.headers.get('X-User-Groups');
 
     if (!email) {
         return { success: false, error: 'No authentication information in headers' };
@@ -114,7 +127,9 @@ export async function extractProxyUserInfo(req: NextRequest): Promise<ExternalAu
         sub: username || email.split('@')[0],
         email,
         name: username || email.split('@')[0],
-        provider: env.EXTERNAL_AUTH_PROVIDER || 'proxy'
+        provider: env.EXTERNAL_AUTH_PROVIDER || 'proxy',
+        role: roleHeader || undefined,
+        roles: rolesHeader ? rolesHeader.split(',').map(r => r.trim()) : undefined
     };
 
     return { success: true, userInfo };
