@@ -6,6 +6,7 @@ type McpRegisterFn = Parameters<typeof createMcpHandler>[0];
 type McpServer = Parameters<McpRegisterFn>[0];
 import { withMcpAuth } from "better-auth/plugins";
 import { env } from "@/lib/env";
+import { getExternalAuthMode, authenticateViaProxy } from "@/lib/external-auth";
 
 // Import MCP tools
 import {
@@ -199,7 +200,7 @@ function createHandlerForUser(userId: string) {
 	);
 }
 
-// Universal handler that accepts either API key auth or falls back to OAuth via withMcpAuth
+// Universal handler that accepts API key, proxy auth, or falls back to OAuth via withMcpAuth
 const universalHandler = async (req: Request) => {
 	// First: check for API key header
 	const headerKey = (req.headers.get && (req.headers.get('x-api-key') || req.headers.get('authorization'))) || null;
@@ -213,6 +214,22 @@ const universalHandler = async (req: Request) => {
 			const userId = env.MCP_API_USER_ID || env.SEED_USER_ID || 'service-user';
 			const handler = createHandlerForUser(userId);
 			return handler(req);
+		}
+	}
+
+	// Second: check for proxy authentication (if enabled)
+	const externalAuthMode = getExternalAuthMode();
+	if (externalAuthMode === 'proxy') {
+		try {
+			const proxyAuth = await authenticateViaProxy(req as any);
+			if (proxyAuth.success && proxyAuth.userId) {
+				const handler = createHandlerForUser(proxyAuth.userId);
+				return handler(req);
+			}
+			// If proxy auth fails, log and fall through to Better Auth
+			console.warn('Proxy authentication failed in MCP handler:', proxyAuth.error);
+		} catch (error) {
+			console.error('Error during proxy authentication in MCP handler:', error);
 		}
 	}
 
