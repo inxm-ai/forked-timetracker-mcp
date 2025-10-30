@@ -56,8 +56,10 @@ export function useUnifiedSession(): UseUnifiedSessionResult {
   }, [hasCheckedProxy]);
 
   // Determine which session to use based on auth mode
-  const isProxyMode = proxySession?.mode === 'proxy';
-  const isPending = isProxyMode ? isProxyPending : isBetterAuthPending;
+  const hasProxyResponse = proxySession !== null;
+  const mode = proxySession?.mode || 'better-auth';
+  const isProxyMode = mode === 'proxy';
+  const isPending = !hasProxyResponse || (isProxyMode ? isProxyPending : isBetterAuthPending);
   
   let effectiveSession: UnifiedSession | null = null;
   if (isProxyMode) {
@@ -76,6 +78,6 @@ export function useUnifiedSession(): UseUnifiedSessionResult {
   return {
     data: effectiveSession,
     isPending,
-    mode: proxySession?.mode || 'better-auth'
+    mode
   };
 }
