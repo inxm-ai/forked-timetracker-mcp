@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
 					{ key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT' },
 					{
 						key: 'Access-Control-Allow-Headers',
-						value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Authorization, mcp-protocol-version'
+						value: 'X-CSRF-Token, X-Requested-With, x-auth-request-user, x-auth-request-email, x-auth-request-preferred-username, X-Auth-Request-Access-Token, X-Forwarded-Access-Token, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Authorization, mcp-protocol-version'
 					}
 				]
 			}
