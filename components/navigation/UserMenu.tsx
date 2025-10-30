@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { authClient, signOut } from '@/lib/authClient';
+import { signOut } from '@/lib/authClient';
+import { useUnifiedSession } from '@/lib/hooks/useUnifiedSession';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -27,9 +28,16 @@ import {
 
 export default function UserMenu() {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
+  const { data: session, mode } = useUnifiedSession();
 
   const handleSignOut = async () => {
+    // For proxy mode, just redirect to home (proxy handles logout)
+    if (mode === 'proxy') {
+      router.push('/');
+      return;
+    }
+    
+    // For Better Auth, use the signOut function
     await signOut({
       fetchOptions: {
         onSuccess: () => {
@@ -47,6 +55,9 @@ export default function UserMenu() {
   const initials = user.name 
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
     : user.email?.substring(0, 2).toUpperCase() || 'U';
+  
+  const userImage = user.image;
+  const emailVerified = user.emailVerified;
 
   return (
     <div className="flex items-center gap-3">
@@ -55,7 +66,7 @@ export default function UserMenu() {
           <Button variant="ghost" className="relative h-10 w-auto px-3 rounded-full">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
+                <AvatarImage src={userImage || undefined} alt={user.name || 'User'} />
                 <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm">
                   {initials}
                 </AvatarFallback>
@@ -77,7 +88,7 @@ export default function UserMenu() {
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
+                  <AvatarImage src={userImage || undefined} alt={user.name || 'User'} />
                   <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
                     {initials}
                   </AvatarFallback>
@@ -94,9 +105,9 @@ export default function UserMenu() {
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">
                   <Shield className="h-3 w-3 mr-1" />
-                  {'user'}
+                  {user.role || 'user'}
                 </Badge>
-                {user.emailVerified && (
+                {emailVerified && (
                   <Badge variant="default" className="text-xs bg-green-100 text-green-800 hover:bg-green-100">
                     Verified
                   </Badge>

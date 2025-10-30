@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { authClient } from "@/lib/authClient";
+import { useUnifiedSession } from "@/lib/hooks/useUnifiedSession";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -10,7 +10,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending } = useUnifiedSession();
 
   // Redirect unauthenticated users to home
   useEffect(() => {

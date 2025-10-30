@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ModeToggle } from "@/components/mode-toggle";
-import { authClient } from "@/lib/authClient";
+import { useUnifiedSession } from "@/lib/hooks/useUnifiedSession";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ import {
 
 export default function Home() {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending } = useUnifiedSession();
 
   // Show loading state while checking authentication
   if (isPending) {
