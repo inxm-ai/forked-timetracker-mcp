@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
 	/* config options here */
 	output: 'standalone',
 	basePath: nextBasePath,
+	assetPrefix: nextBasePath,
 	async headers() {
 		return [
 			{
