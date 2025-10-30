@@ -1,12 +1,32 @@
 import type { NextConfig } from "next";
 
+// Read raw base path from env (default to '/').
+const rawBasePath = process.env.BASE_PATH ?? '/';
+
+function normalizeBasePath(input: string): string {
+	if (!input) return '/';
+	let p = input;
+	// ensure leading slash
+	if (!p.startsWith('/')) p = '/' + p;
+	// remove trailing slash if present (but keep single '/' for root)
+	if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+	return p;
+}
+
+const normalizedBasePath = normalizeBasePath(rawBasePath);
+// Next.js basePath should be an empty string for root, otherwise the normalized path
+const nextBasePath = normalizedBasePath === '/' ? '' : normalizedBasePath;
+// headers source should include the base path prefix when it's not root
+const authHeadersSource = normalizedBasePath === '/' ? '/api/auth/:path*' : `${normalizedBasePath}/api/auth/:path*`;
+
 const nextConfig: NextConfig = {
 	/* config options here */
 	output: 'standalone',
+	basePath: nextBasePath,
 	async headers() {
 		return [
 			{
-				source: '/api/auth/:path*',
+				source: authHeadersSource,
 				headers: [
 					{ key: 'Access-Control-Allow-Credentials', value: 'true' },
 					{ key: 'Access-Control-Allow-Origin', value: '*' },
