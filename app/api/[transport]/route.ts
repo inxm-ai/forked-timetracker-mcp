@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { createMcpHandler } from "@vercel/mcp-adapter";
+import { createMcpHandler } from "mcp-handler";
 
 // Tricking typescript into exporting the correct types
 type McpRegisterFn = Parameters<typeof createMcpHandler>[0];
@@ -48,7 +48,7 @@ function registerToolsForUser(server: McpServer, userId: string, userRole?: stri
 	server.tool(
 		createClientTool.name,
 		createClientTool.description,
-		createClientTool.schema,
+		createClientTool.schema,		
 		async (params) => createClientTool.handler(params, userId)
 	);
 
