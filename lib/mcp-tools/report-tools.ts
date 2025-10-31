@@ -12,12 +12,28 @@ type TimeEntriesResponse = {
 export const listTimeEntresTool = {
   name: "list_time_entries",
   description: "List time entries with optional filtering by project and date range",
-  schema: {
+  inputSchema: {
     projectId: z.string().optional(),
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
     limit: z.number().int().positive().max(100).optional().default(20),
     withDetails: z.boolean().optional().default(false),
+  },
+  outputSchema: {
+    timeEntries: z.array(
+      z.object({
+        id: z.string(),
+        userId: z.string(),
+        projectId: z.string(),
+        description: z.string(),
+        startTime: z.date(),
+        endTime: z.date().nullable(),
+        durationMinutes: z.number().int().nullable(),
+        isActive: z.boolean(),
+        createdAt: z.date(),
+        updatedAt: z.date(),
+      })
+    ).nullable(),
   },
   handler: async (params: { projectId?: string; startDate?: string; endDate?: string; limit?: number; withDetails?: boolean }, userId: string): Promise<McpResponse<TimeEntriesResponse>> => {
     try {
@@ -90,9 +106,21 @@ type TimeSummaryResponse = {
 export const getTimeSummaryTool = {
   name: "get_time_summary",
   description: "Get a summary of time worked grouped by client and project for a date range",
-  schema: {
+  inputSchema: {
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
+  },
+  outputSchema: {
+    items: z.array(
+      z.object({
+        clientName: z.string(),
+        projectName: z.string(),
+        totalHours: z.number(),
+        entryCount: z.number(),
+      })
+    ).nullable(),
+    totalHours: z.number().optional(),
+    totalEntries: z.number().optional(),
   },
   handler: async (params: { startDate?: string; endDate?: string }, userId: string): Promise<McpResponse<TimeSummaryResponse>> => {
     try {
@@ -146,9 +174,21 @@ type CalculateEarningsResponse = {
 export const calculateEarningsTool = {
   name: "calculate_earnings",
   description: "Calculate potential earnings based on time worked and hourly rates",
-  schema: {
+  inputSchema: {
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
+  },
+  outputSchema: {
+    earnings: z.array(
+      z.object({
+        clientName: z.string(),
+        projectName: z.string(),
+        totalHours: z.number(),
+        hourlyRate: z.number().nullable(),
+        earnings: z.number(),
+        entryCount: z.number(),
+      })
+    ).nullable(),
   },
   handler: async (params: { startDate?: string; endDate?: string }, userId: string): Promise<McpResponse<CalculateEarningsResponse>> => {
     try {

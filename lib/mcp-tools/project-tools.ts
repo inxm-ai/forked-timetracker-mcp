@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ProjectService } from "../services/projects";
 import { type Project, type NewProject } from '../../drizzle/schema';
 import { createMcpError, createStructuredMcpResponse, McpResponse } from "./utils";
+import { input } from "@testing-library/user-event/dist/cjs/event/index.js";
 
 const projectService = new ProjectService();
 
@@ -15,11 +16,23 @@ type ProjectsResponse = {
 export const createProjectTool = {
   name: "create_project",
   description: "Create a new project for a client",
-  schema: {
+  inputSchema: {
     name: z.string().min(1, "Project name is required"),
     clientId: z.string().min(1, "Client ID is required"),
     description: z.string().optional(),
     hourlyRate: z.number().positive().optional(),
+  },
+  outputSchema: {
+    project: z.object({
+      id: z.string(),
+      name: z.string(),
+      clientId: z.string(),
+      description: z.string().nullable(),
+      hourlyRate: z.string().nullable(),
+      active: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { name: string; clientId: string; description?: string; hourlyRate?: number }, userId: string): Promise<McpResponse<ProjectResponse>> => {
     try {
@@ -43,10 +56,24 @@ export const createProjectTool = {
 export const listProjectsTool = {
   name: "list_projects",
   description: "List all projects (shared across all users), optionally filtered by client",
-  schema: {
+  inputSchema: {
     clientId: z.string().optional(),
     activeOnly: z.boolean().optional().default(true),
     withClient: z.boolean().optional().default(false),
+  },
+  outputSchema: {
+    projects: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        clientId: z.string(),
+        description: z.string().nullable(),
+        hourlyRate: z.string().nullable(),
+        active: z.boolean(),
+        createdAt: z.date(),
+        updatedAt: z.date(),
+      })
+    ).nullable(),
   },
   handler: async (params: { clientId?: string; activeOnly?: boolean; withClient?: boolean }, userId: string): Promise<McpResponse<ProjectsResponse>> => {
     try {
@@ -98,13 +125,25 @@ export const listProjectsTool = {
 export const updateProjectTool = {
   name: "update_project",
   description: "Update an existing project",
-  schema: {
+  inputSchema: {
     projectId: z.string().min(1, "Project ID is required"),
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     clientId: z.string().optional(),
     hourlyRate: z.number().positive().optional(),
     active: z.boolean().optional(),
+  },
+  outputSchema: {
+    project: z.object({
+      id: z.string(),
+      name: z.string(),
+      clientId: z.string(),
+      description: z.string().nullable(),
+      hourlyRate: z.string().nullable(),
+      active: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { projectId: string; name?: string; description?: string; clientId?: string; hourlyRate?: number; active?: boolean }, userId: string): Promise<McpResponse<ProjectResponse>> => {
     try {
@@ -134,8 +173,20 @@ export const updateProjectTool = {
 export const deactivateProjectTool = {
   name: "deactivate_project",
   description: "Deactivate a project (soft delete)",
-  schema: {
+  inputSchema: {
     projectId: z.string().min(1, "Project ID is required"),
+  },
+  outputSchema: {
+    project: z.object({
+      id: z.string(),
+      name: z.string(),
+      clientId: z.string(),
+      description: z.string().nullable(),
+      hourlyRate: z.string().nullable(),
+      active: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { projectId: string }, userId: string): Promise<McpResponse<ProjectResponse>> => {
     try {

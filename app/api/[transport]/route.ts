@@ -45,118 +45,182 @@ function registerToolsForUser(server: McpServer, userId: string, userRole?: stri
 	// In the future, we can pass role directly to tool handlers
 	
 	// Client management tools
-	server.tool(
+	server.registerTool(
 		createClientTool.name,
-		createClientTool.description,
-		createClientTool.schema,		
+		{
+			title: createClientTool.name,
+			description: createClientTool.description,
+			inputSchema: createClientTool.inputSchema,
+			outputSchema: createClientTool.outputSchema,
+		},
 		async (params) => createClientTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		listClientsTool.name,
-		listClientsTool.description,
-		listClientsTool.schema,
+		{
+			title: listClientsTool.name,
+			description: listClientsTool.description,
+			inputSchema: listClientsTool.inputSchema,
+			outputSchema: listClientsTool.outputSchema,
+		},
 		async (params) => listClientsTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		updateClientTool.name,
-		updateClientTool.description,
-		updateClientTool.schema,
+		{
+			title: updateClientTool.name,
+			description: updateClientTool.description,
+			inputSchema: updateClientTool.inputSchema,
+			outputSchema: updateClientTool.outputSchema,
+		},
 		async (params) => updateClientTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		deactivateClientTool.name,
-		deactivateClientTool.description,
-		deactivateClientTool.schema,
+		{
+			title: deactivateClientTool.name,
+			description: deactivateClientTool.description,
+			inputSchema: deactivateClientTool.inputSchema,
+			outputSchema: deactivateClientTool.outputSchema,
+		},
 		async (params) => deactivateClientTool.handler(params, userId)
 	);
 
 	// Project management tools
-	server.tool(
+	server.registerTool(
 		createProjectTool.name,
-		createProjectTool.description,
-		createProjectTool.schema,
+		{
+			title: createProjectTool.name,
+			description: createProjectTool.description,
+			inputSchema: createProjectTool.inputSchema,
+			outputSchema: createProjectTool.outputSchema,
+		},
 		async (params) => createProjectTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		listProjectsTool.name,
-		listProjectsTool.description,
-		listProjectsTool.schema,
+		{
+			title: listProjectsTool.name,
+			description: listProjectsTool.description,
+			inputSchema: listProjectsTool.inputSchema,
+			outputSchema: listProjectsTool.outputSchema,
+		},
 		async (params) => listProjectsTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		updateProjectTool.name,
-		updateProjectTool.description,
-		updateProjectTool.schema,
+		{
+			title: updateProjectTool.name,
+			description: updateProjectTool.description,
+			inputSchema: updateProjectTool.inputSchema,
+			outputSchema: updateProjectTool.outputSchema,
+		},
 		async (params) => updateProjectTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		deactivateProjectTool.name,
-		deactivateProjectTool.description,
-		deactivateProjectTool.schema,
+		{
+			title: deactivateProjectTool.name,
+			description: deactivateProjectTool.description,
+			inputSchema: deactivateProjectTool.inputSchema,
+			outputSchema: deactivateProjectTool.outputSchema,
+		},
 		async (params) => deactivateProjectTool.handler(params, userId)
 	);
 
 	// Time tracking tools
-	server.tool(
+	server.registerTool(
 		startTimeTrackingTool.name,
-		startTimeTrackingTool.description,
-		startTimeTrackingTool.schema,
+		{
+			title: startTimeTrackingTool.name,
+			description: startTimeTrackingTool.description,
+			inputSchema: startTimeTrackingTool.inputSchema,
+			outputSchema: startTimeTrackingTool.outputSchema,
+		},
 		async (params) => startTimeTrackingTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		stopTimeTrackingTool.name,
-		stopTimeTrackingTool.description,
-		stopTimeTrackingTool.schema,
+		{
+			title: stopTimeTrackingTool.name,
+			description: stopTimeTrackingTool.description,
+			inputSchema: stopTimeTrackingTool.inputSchema,
+			outputSchema: stopTimeTrackingTool.outputSchema,
+		},
 		async (params) => stopTimeTrackingTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		getActiveTimeEntryTool.name,
-		getActiveTimeEntryTool.description,
-		getActiveTimeEntryTool.schema,
+		{
+			title: getActiveTimeEntryTool.name,
+			description: getActiveTimeEntryTool.description,
+			inputSchema: getActiveTimeEntryTool.inputSchema,
+			outputSchema: getActiveTimeEntryTool.outputSchema,
+		},
 		async (params) => getActiveTimeEntryTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		addManualTimeEntryTool.name,
-		addManualTimeEntryTool.description,
-		addManualTimeEntryTool.schema,
+		{
+			title: addManualTimeEntryTool.name,
+			description: addManualTimeEntryTool.description,
+			inputSchema: addManualTimeEntryTool.inputSchema,
+			outputSchema: addManualTimeEntryTool.outputSchema,
+		},
 		async (params) => addManualTimeEntryTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		updateTimeEntryTool.name,
-		updateTimeEntryTool.description,
-		updateTimeEntryTool.schema,
+		{
+			title: updateTimeEntryTool.name,
+			description: updateTimeEntryTool.description,
+			inputSchema: updateTimeEntryTool.inputSchema,
+			outputSchema: updateTimeEntryTool.outputSchema,
+		},
 		async (params) => updateTimeEntryTool.handler(params, userId)
 	);
 
 	// Reporting tools
-	server.tool(
+	server.registerTool(
 		listTimeEntresTool.name,
-		listTimeEntresTool.description,
-		listTimeEntresTool.schema,
+		{
+			title: listTimeEntresTool.name,
+			description: listTimeEntresTool.description,
+			inputSchema: listTimeEntresTool.inputSchema,
+			outputSchema: listTimeEntresTool.outputSchema,
+		},
 		async (params) => listTimeEntresTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		getTimeSummaryTool.name,
-		getTimeSummaryTool.description,
-		getTimeSummaryTool.schema,
+		{
+			title: getTimeSummaryTool.name,
+			description: getTimeSummaryTool.description,
+			inputSchema: getTimeSummaryTool.inputSchema,
+			outputSchema: getTimeSummaryTool.outputSchema,
+		},
 		async (params) => getTimeSummaryTool.handler(params, userId)
 	);
 
-	server.tool(
+	server.registerTool(
 		calculateEarningsTool.name,
-		calculateEarningsTool.description,
-		calculateEarningsTool.schema,
+		{
+			title: calculateEarningsTool.name,
+			description: calculateEarningsTool.description,
+			inputSchema: calculateEarningsTool.inputSchema,
+			outputSchema: calculateEarningsTool.outputSchema,
+		},
 		async (params) => calculateEarningsTool.handler(params, userId)
 	);
 }

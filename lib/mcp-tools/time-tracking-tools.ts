@@ -14,9 +14,23 @@ type TimeEntryResponse = {
 export const startTimeTrackingTool = {
   name: "start_time_tracking",
   description: "Start tracking time for a project",
-  schema: {
+  inputSchema: {
     projectId: z.string().min(1, "Project ID is required"),
     description: z.string().min(1, "Description is required"),
+  },
+  outputSchema: {
+    timeEntry: z.object({
+      id: z.string(),
+      userId: z.string(),
+      projectId: z.string(),
+      description: z.string(),
+      startTime: z.date(),
+      endTime: z.date().nullable(),
+      durationMinutes: z.number().int().nullable(),
+      isActive: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { projectId: string; description: string }, userId: string) : Promise<McpResponse<TimeEntryResponse>> => {
     try {
@@ -36,8 +50,22 @@ export const startTimeTrackingTool = {
 export const stopTimeTrackingTool = {
   name: "stop_time_tracking",
   description: "Stop the currently active time tracking",
-  schema: {
+  inputSchema: {
     entryId: z.string().optional(),
+  },
+  outputSchema: {
+    timeEntry: z.object({
+      id: z.string(),
+      userId: z.string(),
+      projectId: z.string(),
+      description: z.string(),
+      startTime: z.date(),
+      endTime: z.date().nullable(),
+      durationMinutes: z.number().int().nullable(),
+      isActive: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { entryId?: string }, userId: string): Promise<McpResponse<TimeEntryResponse>> => {
     try {
@@ -65,7 +93,21 @@ export const stopTimeTrackingTool = {
 export const getActiveTimeEntryTool = {
   name: "get_active_time_entry",
   description: "Get the currently active time entry if any",
-  schema: {} as Record<string, never>,
+  inputSchema: {} as Record<string, never>,
+  outputSchema: {
+    timeEntry: z.object({
+      id: z.string(),
+      userId: z.string(),
+      projectId: z.string(),
+      description: z.string(),
+      startTime: z.date(),
+      endTime: z.date().nullable(),
+      durationMinutes: z.number().int().nullable(),
+      isActive: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
+  },
   handler: async (params: Record<string, never>, userId: string) : Promise<McpResponse<TimeEntryResponse>> => {
     try {
       const activeEntry = await timeEntryService.getActiveTimeEntry(userId);
@@ -97,11 +139,25 @@ export const getActiveTimeEntryTool = {
 export const addManualTimeEntryTool = {
   name: "add_manual_time_entry",
   description: "Add a manual time entry for completed work",
-  schema: {
+  inputSchema: {
     projectId: z.string().min(1, "Project ID is required"),
     description: z.string().min(1, "Description is required"),
     startTime: z.string().datetime("Start time must be a valid ISO datetime"),
     endTime: z.string().datetime("End time must be a valid ISO datetime"),
+  },
+  outputSchema: {
+    timeEntry: z.object({
+      id: z.string(),
+      userId: z.string(),
+      projectId: z.string(),
+      description: z.string(),
+      startTime: z.date(),
+      endTime: z.date().nullable(),
+      durationMinutes: z.number().int().nullable(),
+      isActive: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { projectId: string; description: string; startTime: string; endTime: string }, userId: string) : Promise<McpResponse<TimeEntryResponse>> => {
     try {
@@ -134,11 +190,25 @@ export const addManualTimeEntryTool = {
 export const updateTimeEntryTool = {
   name: "update_time_entry",
   description: "Update an existing time entry",
-  schema: {
+  inputSchema: {
     entryId: z.string().min(1, "Entry ID is required"),
     description: z.string().optional(),
     startTime: z.string().datetime().optional(),
     endTime: z.string().datetime().optional(),
+  },
+  outputSchema: {
+    timeEntry: z.object({
+      id: z.string(),
+      userId: z.string(),
+      projectId: z.string(),
+      description: z.string(),
+      startTime: z.date(),
+      endTime: z.date().nullable(),
+      durationMinutes: z.number().int().nullable(),
+      isActive: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { entryId: string; description?: string; startTime?: string; endTime?: string }, userId: string) => {
     try {

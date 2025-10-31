@@ -2,6 +2,8 @@ import { z } from "zod";
 import { ClientService } from "../services/clients";
 import { type Client } from '../../drizzle/schema';
 import { createMcpError, createStructuredMcpResponse, McpResponse } from "./utils";
+import { create } from "domain";
+import { input } from "@testing-library/user-event/dist/cjs/event/input.js";
 
 const clientService = new ClientService();
 
@@ -15,9 +17,19 @@ type ClientsResponse = {
 export const createClientTool = {
   name: "create_client",
   description: "Create a new client",
-  schema: {
+  inputSchema: {
     name: z.string().min(1, "Client name is required"),
     description: z.string().optional(),
+  },
+  outputSchema: {
+    client: z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      active: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { name: string; description?: string }, userId: string): Promise<McpResponse<ClientResponse>> => {
     try {
@@ -37,8 +49,20 @@ export const createClientTool = {
 export const listClientsTool = {
   name: "list_clients",
   description: "List all clients (shared across all users)",
-  schema: {
+  inputSchema: {
     activeOnly: z.boolean().optional().default(true),
+  },
+  outputSchema: {
+    clients: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string().nullable(),
+        active: z.boolean(),
+        createdAt: z.date(),
+        updatedAt: z.date(),
+      })
+    ).nullable(),
   },
   handler: async (params: { activeOnly?: boolean }, userId: string): Promise<McpResponse<ClientsResponse>> => {
     try {
@@ -70,11 +94,21 @@ export const listClientsTool = {
 export const updateClientTool = {
   name: "update_client",
   description: "Update an existing client",
-  schema: {
+  inputSchema: {
     clientId: z.string().min(1, "Client ID is required"),
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     active: z.boolean().optional(),
+  },
+  outputSchema: {
+    client: z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      active: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { clientId: string; name?: string; description?: string; active?: boolean }, userId: string): Promise<McpResponse<ClientResponse>> => {
     try {
@@ -100,8 +134,18 @@ export const updateClientTool = {
 export const deactivateClientTool = {
   name: "deactivate_client",
   description: "Deactivate a client (soft delete)",
-  schema: {
+  inputSchema: {
     clientId: z.string().min(1, "Client ID is required"),
+  },
+  outputSchema: {
+    client: z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      active: z.boolean(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }).nullable(),
   },
   handler: async (params: { clientId: string }, userId: string): Promise<McpResponse<ClientResponse>> => {
     try {
