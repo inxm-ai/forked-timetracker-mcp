@@ -1,7 +1,16 @@
 import { z } from "zod";
 import { ProjectService } from "../services/projects";
+import { type Project, type NewProject } from '../../drizzle/schema';
+import { createMcpError, createStructuredMcpResponse, McpResponse } from "./utils";
 
 const projectService = new ProjectService();
+
+type ProjectResponse = {
+  project: Project | null;
+}
+type ProjectsResponse = {
+  projects: Project[] | null;
+}
 
 export const createProjectTool = {
   name: "create_project",
@@ -12,27 +21,21 @@ export const createProjectTool = {
     description: z.string().optional(),
     hourlyRate: z.number().positive().optional(),
   },
-  handler: async (params: { name: string; clientId: string; description?: string; hourlyRate?: number }, userId: string) => {
+  handler: async (params: { name: string; clientId: string; description?: string; hourlyRate?: number }, userId: string): Promise<McpResponse<ProjectResponse>> => {
     try {
       const projectData = {
         ...params,
         hourlyRate: params.hourlyRate?.toString(),
       };
       const project = await projectService.createProject(userId, projectData);
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Project created successfully:\n- ID: ${project.id}\n- Name: ${project.name}\n- Client ID: ${project.clientId}\n- Description: ${project.description || 'None'}\n- Hourly Rate: ${project.hourlyRate ? `$${project.hourlyRate}` : 'None'}` 
-        }],
-      };
+      return createStructuredMcpResponse(
+        `Project created successfully:\n- ID: ${project.id}\n- Name: ${project.name}\n- Client ID: ${project.clientId}\n- Description: ${project.description || 'None'}\n- Hourly Rate: ${project.hourlyRate ? `$${project.hourlyRate}` : 'None'}`,
+        { project }
+      );
     } catch (error) {
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Error creating project: ${error instanceof Error ? error.message : 'Unknown error'}` 
-        }],
-        isError: true,
-      };
+      return createMcpError(
+        `Error creating project: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   },
 };
@@ -45,55 +48,49 @@ export const listProjectsTool = {
     activeOnly: z.boolean().optional().default(true),
     withClient: z.boolean().optional().default(false),
   },
-  handler: async (params: { clientId?: string; activeOnly?: boolean; withClient?: boolean }, userId: string) => {
+  handler: async (params: { clientId?: string; activeOnly?: boolean; withClient?: boolean }, userId: string): Promise<McpResponse<ProjectsResponse>> => {
     try {
       if (params.withClient) {
         const projectsWithClient = await projectService.getProjectsWithClient(userId, params.activeOnly);
         
         if (projectsWithClient.length === 0) {
-          return {
-            content: [{ type: "text" as const, text: "No projects found." }],
-          };
+          return createStructuredMcpResponse(
+            "No projects found.",
+            { projects: [] }
+          );
         }
 
         const projectList = projectsWithClient.map(({ project, client }) => 
           `- ${project.name} (ID: ${project.id}) - Client: ${client.name}${project.description ? ` - ${project.description}` : ''}${project.hourlyRate ? ` - $${project.hourlyRate}/hr` : ''}${!project.active ? ' [INACTIVE]' : ''}`
         ).join('\n');
 
-        return {
-          content: [{ 
-            type: "text" as const, 
-            text: `Available projects:\n${projectList}` 
-          }],
-        };
+        return createStructuredMcpResponse(
+          `Available projects:\n${projectList}`,
+          { projects: projectsWithClient.map(pwc => pwc.project) }
+        );
       } else {
         const projects = await projectService.listProjects(userId, params.clientId, params.activeOnly);
         
         if (projects.length === 0) {
-          return {
-            content: [{ type: "text" as const, text: "No projects found." }],
-          };
+          return createStructuredMcpResponse(
+            "No projects found.",
+            { projects: [] }
+          );
         }
 
         const projectList = projects.map(project => 
           `- ${project.name} (ID: ${project.id})${project.description ? ` - ${project.description}` : ''}${project.hourlyRate ? ` - $${project.hourlyRate}/hr` : ''}${!project.active ? ' [INACTIVE]' : ''}`
         ).join('\n');
 
-        return {
-          content: [{ 
-            type: "text" as const, 
-            text: `Available projects:\n${projectList}` 
-          }],
-        };
+        return createStructuredMcpResponse(
+          `Available projects:\n${projectList}`,
+          { projects }
+        );
       }
     } catch (error) {
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Error listing projects: ${error instanceof Error ? error.message : 'Unknown error'}` 
-        }],
-        isError: true,
-      };
+      return createMcpError(
+        `Error listing projects: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   },
 };
@@ -109,7 +106,7 @@ export const updateProjectTool = {
     hourlyRate: z.number().positive().optional(),
     active: z.boolean().optional(),
   },
-  handler: async (params: { projectId: string; name?: string; description?: string; clientId?: string; hourlyRate?: number; active?: boolean }, userId: string) => {
+  handler: async (params: { projectId: string; name?: string; description?: string; clientId?: string; hourlyRate?: number; active?: boolean }, userId: string): Promise<McpResponse<ProjectResponse>> => {
     try {
       const { projectId, hourlyRate, ...restData } = params;
       const updateData = {
@@ -119,26 +116,17 @@ export const updateProjectTool = {
       const project = await projectService.updateProject(userId, projectId, updateData);
       
       if (!project) {
-        return {
-          content: [{ type: "text" as const, text: "Project not found." }],
-          isError: true,
-        };
+        return createMcpError("Project not found.");
       }
 
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Project updated successfully:\n- ID: ${project.id}\n- Name: ${project.name}\n- Client ID: ${project.clientId}\n- Description: ${project.description || 'None'}\n- Hourly Rate: ${project.hourlyRate ? `$${project.hourlyRate}` : 'None'}\n- Active: ${project.active}` 
-        }],
-      };
+      return createStructuredMcpResponse(
+        `Project updated successfully:\n- ID: ${project.id}\n- Name: ${project.name}\n- Client ID: ${project.clientId}\n- Description: ${project.description || 'None'}\n- Hourly Rate: ${project.hourlyRate ? `$${project.hourlyRate}` : 'None'}\n- Active: ${project.active}`,
+        { project }
+      )
     } catch (error) {
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Error updating project: ${error instanceof Error ? error.message : 'Unknown error'}` 
-        }],
-        isError: true,
-      };
+      return createMcpError(
+        `Error updating project: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   },
 };
@@ -149,31 +137,22 @@ export const deactivateProjectTool = {
   schema: {
     projectId: z.string().min(1, "Project ID is required"),
   },
-  handler: async (params: { projectId: string }, userId: string) => {
+  handler: async (params: { projectId: string }, userId: string): Promise<McpResponse<ProjectResponse>> => {
     try {
       const project = await projectService.deactivateProject(userId, params.projectId);
       
       if (!project) {
-        return {
-          content: [{ type: "text" as const, text: "Project not found." }],
-          isError: true,
-        };
+        return createMcpError("Project not found.");
       }
 
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Project "${project.name}" has been deactivated successfully.` 
-        }],
-      };
+      return createStructuredMcpResponse(
+        `Project "${project.name}" has been deactivated successfully.`,
+        { project }
+      );
     } catch (error) {
-      return {
-        content: [{ 
-          type: "text" as const, 
-          text: `Error deactivating project: ${error instanceof Error ? error.message : 'Unknown error'}` 
-        }],
-        isError: true,
-      };
+      return createMcpError(
+        `Error deactivating project: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   },
 };
