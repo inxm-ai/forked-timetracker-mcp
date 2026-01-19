@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ProjectService } from "../services/projects";
-import { type Project, type NewProject } from '../../drizzle/schema';
+import { type Project, type NewProject, user } from '../../drizzle/schema';
 import { createMcpError, createStructuredMcpResponse, McpResponse } from "./utils";
 import { input } from "@testing-library/user-event/dist/cjs/event/index.js";
 
@@ -28,6 +28,7 @@ export const createProjectTool = {
       name: z.string(),
       clientId: z.string(),
       description: z.string().nullable(),
+      userId: z.string(),
       hourlyRate: z.string().nullable(),
       active: z.boolean(),
       createdAt: z.date(),
@@ -68,6 +69,7 @@ export const listProjectsTool = {
         name: z.string(),
         clientId: z.string(),
         description: z.string().nullable(),
+        userId: z.string(),
         hourlyRate: z.string().nullable(),
         active: z.boolean(),
         createdAt: z.date(),
@@ -139,6 +141,7 @@ export const updateProjectTool = {
       name: z.string(),
       clientId: z.string(),
       description: z.string().nullable(),
+      userId: z.string(),
       hourlyRate: z.string().nullable(),
       active: z.boolean(),
       createdAt: z.date(),
@@ -182,6 +185,7 @@ export const deactivateProjectTool = {
       name: z.string(),
       clientId: z.string(),
       description: z.string().nullable(),
+      userId: z.string(),
       hourlyRate: z.string().nullable(),
       active: z.boolean(),
       createdAt: z.date(),
