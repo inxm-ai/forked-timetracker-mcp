@@ -5,8 +5,12 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat postgresql-client
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm, pinned to v10: pnpm 11 ignores pnpm-workspace.yaml's
+# ignoredBuiltDependencies and fails the install with ERR_PNPM_IGNORED_BUILDS.
+# When changing this repo, check whether the latest pnpm honours that list
+# again (or move the list to pnpm 11's setting); if `docker build .` passes
+# with plain `pnpm`, drop the pin here and in the two stages below.
+RUN npm install -g pnpm@10
 
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
@@ -23,7 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=1
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 
 # Build the Next.js application
 RUN pnpm build
@@ -39,7 +43,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Install pnpm and postgresql-client for migrations
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 RUN apk add --no-cache postgresql-client
 
 # Copy necessary files from builder
