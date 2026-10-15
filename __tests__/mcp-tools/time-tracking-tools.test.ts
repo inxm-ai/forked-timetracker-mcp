@@ -132,8 +132,8 @@ describe('Time Tracking MCP Tools', () => {
     })
 
     it('should validate required parameters', () => {
-      expect(startTimeTrackingTool.schema.projectId).toBeDefined()
-      expect(startTimeTrackingTool.schema.description).toBeDefined()
+      expect(startTimeTrackingTool.inputSchema.projectId).toBeDefined()
+      expect(startTimeTrackingTool.inputSchema.description).toBeDefined()
     })
   })
 
@@ -199,7 +199,7 @@ describe('Time Tracking MCP Tools', () => {
       )
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toBe('No active time entry found to stop.')
+      expect(result.content[0].text).toBe('No active time tracking session found to stop.')
       expect(result.isError).toBe(true)
     })
 
@@ -253,7 +253,7 @@ describe('Time Tracking MCP Tools', () => {
       expect(mockTimeEntryService.getActiveTimeEntry).toHaveBeenCalledWith('test-user-123')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Active time tracking')
+      expect(result.content[0].text).toContain('Active time entry found')
       expect(result.content[0].text).toContain('active-entry')
       expect(result.content[0].text).toContain('project-1')
       expect(result.content[0].text).toContain('Working on feature')
@@ -287,7 +287,7 @@ describe('Time Tracking MCP Tools', () => {
       )
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error getting active time entry')
+      expect(result.content[0].text).toContain('Error retrieving active time entry')
       expect(result.content[0].text).toContain('Database error')
       expect(result.isError).toBe(true)
     })
@@ -354,10 +354,10 @@ describe('Time Tracking MCP Tools', () => {
     })
 
     it('should validate required parameters', () => {
-      expect(addManualTimeEntryTool.schema.projectId).toBeDefined()
-      expect(addManualTimeEntryTool.schema.description).toBeDefined()
-      expect(addManualTimeEntryTool.schema.startTime).toBeDefined()
-      expect(addManualTimeEntryTool.schema.endTime).toBeDefined()
+      expect(addManualTimeEntryTool.inputSchema.projectId).toBeDefined()
+      expect(addManualTimeEntryTool.inputSchema.description).toBeDefined()
+      expect(addManualTimeEntryTool.inputSchema.startTime).toBeDefined()
+      expect(addManualTimeEntryTool.inputSchema.endTime).toBeDefined()
     })
   })
 
@@ -412,7 +412,7 @@ describe('Time Tracking MCP Tools', () => {
       )
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toBe('Time entry not found or does not belong to you.')
+      expect(result.content[0].text).toBe('Time entry not found, or does not belong to you.')
       expect(result.isError).toBe(true)
     })
 
@@ -436,13 +436,13 @@ describe('Time Tracking MCP Tools', () => {
     })
 
     it('should validate required entryId parameter', () => {
-      expect(updateTimeEntryTool.schema.entryId).toBeDefined()
+      expect(updateTimeEntryTool.inputSchema.entryId).toBeDefined()
     })
 
     it('should handle optional parameters', () => {
-      expect(updateTimeEntryTool.schema.description).toBeDefined()
-      expect(updateTimeEntryTool.schema.startTime).toBeDefined()
-      expect(updateTimeEntryTool.schema.endTime).toBeDefined()
+      expect(updateTimeEntryTool.inputSchema.description).toBeDefined()
+      expect(updateTimeEntryTool.inputSchema.startTime).toBeDefined()
+      expect(updateTimeEntryTool.inputSchema.endTime).toBeDefined()
     })
   })
 })
