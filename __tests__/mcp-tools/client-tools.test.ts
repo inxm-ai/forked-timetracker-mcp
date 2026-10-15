@@ -120,8 +120,8 @@ describe('Client MCP Tools', () => {
     })
 
     it('should validate required parameters', () => {
-      expect(createClientTool.schema.name).toBeDefined()
-      expect(createClientTool.schema.description).toBeDefined()
+      expect(createClientTool.inputSchema.name).toBeDefined()
+      expect(createClientTool.inputSchema.description).toBeDefined()
     })
   })
 
@@ -242,13 +242,13 @@ describe('Client MCP Tools', () => {
     })
 
     it('should validate required clientId parameter', () => {
-      expect(updateClientTool.schema.clientId).toBeDefined()
+      expect(updateClientTool.inputSchema.clientId).toBeDefined()
     })
 
     it('should handle optional parameters', () => {
-      expect(updateClientTool.schema.name).toBeDefined()
-      expect(updateClientTool.schema.description).toBeDefined()
-      expect(updateClientTool.schema.active).toBeDefined()
+      expect(updateClientTool.inputSchema.name).toBeDefined()
+      expect(updateClientTool.inputSchema.description).toBeDefined()
+      expect(updateClientTool.inputSchema.active).toBeDefined()
     })
   })
 
@@ -307,7 +307,7 @@ describe('Client MCP Tools', () => {
     })
 
     it('should validate required clientId parameter', () => {
-      expect(deactivateClientTool.schema.clientId).toBeDefined()
+      expect(deactivateClientTool.inputSchema.clientId).toBeDefined()
     })
   })
 })

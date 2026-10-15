@@ -96,7 +96,7 @@ describe('Project MCP Tools', () => {
           name: 'New Project',
           description: 'Project description',
           clientId: 'test-client-1',
-          hourlyRate: "75",
+          hourlyRate: 75,
         },
         'test-user-123'
       )
@@ -130,7 +130,7 @@ describe('Project MCP Tools', () => {
           name: 'New Project',
           description: 'Project description',
           clientId: 'non-existent',
-          hourlyRate: "75",
+          hourlyRate: 75,
         },
         'test-user-123'
       )
@@ -142,10 +142,10 @@ describe('Project MCP Tools', () => {
     })
 
     it('should validate required parameters', () => {
-      expect(createProjectTool.schema.name).toBeDefined()
-      expect(createProjectTool.schema.description).toBeDefined()
-      expect(createProjectTool.schema.clientId).toBeDefined()
-      expect(createProjectTool.schema.hourlyRate).toBeDefined()
+      expect(createProjectTool.inputSchema.name).toBeDefined()
+      expect(createProjectTool.inputSchema.description).toBeDefined()
+      expect(createProjectTool.inputSchema.clientId).toBeDefined()
+      expect(createProjectTool.inputSchema.hourlyRate).toBeDefined()
     })
   })
 
@@ -228,7 +228,7 @@ describe('Project MCP Tools', () => {
           projectId: 'test-project-1',
           name: 'Updated Project Name',
           description: 'Updated description',
-          hourlyRate: "85",
+          hourlyRate: 85,
         },
         'test-user-123'
       )
@@ -286,13 +286,13 @@ describe('Project MCP Tools', () => {
     })
 
     it('should validate required projectId parameter', () => {
-      expect(updateProjectTool.schema.projectId).toBeDefined()
+      expect(updateProjectTool.inputSchema.projectId).toBeDefined()
     })
 
     it('should handle optional parameters', () => {
-      expect(updateProjectTool.schema.name).toBeDefined()
-      expect(updateProjectTool.schema.description).toBeDefined()
-      expect(updateProjectTool.schema.hourlyRate).toBeDefined()
+      expect(updateProjectTool.inputSchema.name).toBeDefined()
+      expect(updateProjectTool.inputSchema.description).toBeDefined()
+      expect(updateProjectTool.inputSchema.hourlyRate).toBeDefined()
     })
   })
 
@@ -351,7 +351,7 @@ describe('Project MCP Tools', () => {
     })
 
     it('should validate required projectId parameter', () => {
-      expect(deactivateProjectTool.schema.projectId).toBeDefined()
+      expect(deactivateProjectTool.inputSchema.projectId).toBeDefined()
     })
   })
 })
