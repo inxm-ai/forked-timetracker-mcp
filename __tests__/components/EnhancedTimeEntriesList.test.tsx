@@ -20,6 +20,18 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 
+// Signed in as a regular user unless a test says otherwise.
+const mockUseUnifiedSession = jest.fn()
+jest.mock('@/lib/hooks/useUnifiedSession', () => ({
+  useUnifiedSession: () => mockUseUnifiedSession(),
+}))
+const signInAs = (role: string) =>
+  mockUseUnifiedSession.mockReturnValue({
+    data: { user: { id: 'test-user-123', role } },
+    isPending: false,
+    mode: 'proxy',
+  })
+
 // Mock fetch
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -70,6 +82,7 @@ describe('EnhancedTimeEntriesList', () => {
     jest.clearAllMocks()
     mockFetch.mockClear()
     mockMutate.mockClear()
+    signInAs('user')
   })
 
   // Spies on document/window must not leak into later tests.
@@ -209,6 +222,43 @@ describe('EnhancedTimeEntriesList', () => {
         expect(mockClick).toHaveBeenCalled()
         expect(mockRevokeObjectURL).toHaveBeenCalled()
       })
+    })
+
+    it('should not offer "All users" to a regular user', async () => {
+      const user = userEvent.setup()
+
+      render(<EnhancedTimeEntriesList mode="full" />)
+      await user.click(screen.getByText('Filters'))
+      await user.click(screen.getByText('Current user only'))
+
+      expect(screen.queryByText('All users')).not.toBeInTheDocument()
+    })
+
+    it('should offer "All users" to roles that may view all timesheets', async () => {
+      signInAs('hr')
+      const user = userEvent.setup()
+
+      render(<EnhancedTimeEntriesList mode="full" />)
+      await user.click(screen.getByText('Filters'))
+      await user.click(screen.getByText('Current user only'))
+
+      expect(screen.getByText('All users')).toBeInTheDocument()
+    })
+
+    it('should keep the filters usable when loading entries fails', async () => {
+      mockSWRResponses({
+        entries: { data: undefined, error: new Error('Forbidden'), isLoading: false },
+        projects: loaded(mockApiResponses.projects),
+        users: loaded(mockApiResponses.users),
+      })
+      const user = userEvent.setup()
+
+      render(<EnhancedTimeEntriesList mode="full" />)
+
+      expect(screen.getByText('Error loading time entries')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Search entries, projects, or clients...')).toBeInTheDocument()
+      await user.click(screen.getByText('Filters'))
+      expect(screen.getByText('Current user only')).toBeInTheDocument()
     })
 
     it('should show pagination controls', () => {

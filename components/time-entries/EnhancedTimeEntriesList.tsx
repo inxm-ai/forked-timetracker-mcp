@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
 import { useRouter } from 'next/navigation';
+import { useUnifiedSession } from '@/lib/hooks/useUnifiedSession';
+import { createAuthorizationContext, canViewAllTimesheets } from '@/lib/authorization';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -143,6 +145,7 @@ interface EnhancedTimeEntriesListProps {
 
 export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10 }: EnhancedTimeEntriesListProps = {}) {
   const router = useRouter();
+  const { data: session } = useUnifiedSession();
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
@@ -435,7 +438,9 @@ export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10
     }
   }, [activeEntry, currentApiUrl]);
 
-  if (entriesError || projectsError || usersError) {
+  // Without projects or users the filters cannot render; an entries error
+  // is shown in the list below so the filters stay usable.
+  if (projectsError || usersError) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -447,7 +452,7 @@ export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10
     );
   }
 
-  if (!timeEntriesData || !projectsData || !usersData) {
+  if ((!timeEntriesData && !entriesError) || !projectsData || !usersData) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -460,8 +465,12 @@ export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10
   }
 
   // Prepare user options for multi-select
+  // /api/time-entries refuses users=all without permission to view all timesheets.
+  const canViewAll = session
+    ? canViewAllTimesheets(createAuthorizationContext(session.user.id, session.user.role)).authorized
+    : false;
   const userOptions: Option[] = [
-    { label: 'All users', value: 'all' },
+    ...(canViewAll ? [{ label: 'All users', value: 'all' }] : []),
     ...usersData.map(user => ({
       label: `${user.name} (${user.entryCount} entries)`,
       value: user.id
@@ -628,7 +637,11 @@ export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10
 
         {/* Entries List */}
         <div className="space-y-3">
-          {displayEntries.length === 0 ? (
+          {entriesError ? (
+            <div className="text-center py-8 text-red-600">
+              Error loading time entries
+            </div>
+          ) : displayEntries.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {mode === 'dashboard' ? 'No recent time entries found' : 'No time entries match your filters'}
             </div>
