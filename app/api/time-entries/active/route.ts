@@ -81,8 +81,8 @@ export async function PATCH(req: NextRequest) {
         .where(eq(timeEntries.id, activeEntry.id));
 
       return Response.json({ success: true, action: 'stopped', durationMinutes });
-    } else if (action === 'pause') {
-      // For now, pause just stops the timer (can be enhanced later for resume functionality)
+    } else {
+      // action is 'pause' (validated above). For now, pause just stops the timer (can be enhanced later for resume functionality)
       const endTime = new Date();
       const startTime = new Date(activeEntry.startTime);
       const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));

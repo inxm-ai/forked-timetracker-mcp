@@ -5,7 +5,6 @@
  * Run with: npm test -- authorization.test.ts
  */
 
-import { describe, it, expect } from '@jest/globals';
 import {
   UserRole,
   Permission,

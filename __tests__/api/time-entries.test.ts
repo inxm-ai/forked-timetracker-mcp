@@ -4,7 +4,7 @@ import { mockTimeEntries, mockProjects, mockClients } from '../mocks/mock-data'
 
 // Mock the auth utils
 jest.mock('@/lib/authUtils', () => ({
-  getUserIdOrThrow: jest.fn().mockResolvedValue('test-user-123'),
+  getAuthenticatedUser: jest.fn().mockResolvedValue({ userId: 'test-user-123', role: 'user' }),
 }))
 
 // Mock the database connection
@@ -149,13 +149,14 @@ describe('/api/time-entries', () => {
     })
 
     it('should handle authentication errors', async () => {
-      const { getUserIdOrThrow } = require('@/lib/authUtils')
-      getUserIdOrThrow.mockRejectedValueOnce(new Error('Unauthorized'))
+      // getAuthenticatedUser throws a 401 Response when the request is unauthenticated
+      const { getAuthenticatedUser } = jest.requireMock<{ getAuthenticatedUser: jest.Mock }>('@/lib/authUtils')
+      getAuthenticatedUser.mockRejectedValueOnce(new Response('Unauthorized', { status: 401 }))
 
       const request = createMockRequest('GET', '/api/time-entries')
       const response = await GET(request)
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(401)
     })
   })
 
@@ -286,8 +287,9 @@ describe('/api/time-entries', () => {
     })
 
     it('should handle authentication errors', async () => {
-      const { getUserIdOrThrow } = require('@/lib/authUtils')
-      getUserIdOrThrow.mockRejectedValueOnce(new Error('Unauthorized'))
+      // getAuthenticatedUser throws a 401 Response when the request is unauthenticated
+      const { getAuthenticatedUser } = jest.requireMock<{ getAuthenticatedUser: jest.Mock }>('@/lib/authUtils')
+      getAuthenticatedUser.mockRejectedValueOnce(new Response('Unauthorized', { status: 401 }))
 
       const request = createMockRequest('POST', '/api/time-entries', {
         projectId: 'test-project-1',
@@ -295,7 +297,7 @@ describe('/api/time-entries', () => {
       })
       const response = await POST(request)
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(401)
     })
   })
 })
