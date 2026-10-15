@@ -93,7 +93,8 @@ export default function ActiveTimer({ mode = 'header' }: ActiveTimerProps) {
         }, 100);
       }
     } catch (error) {
-      console.error(`Error ${action}ing timer:`, error);
+      const actionVerb = action === 'stop' ? 'stopping' : 'pausing';
+      console.error(`Error ${actionVerb} timer:`, error);
       // You could add toast notifications here
     } finally {
       setIsLoading(false);
