@@ -137,17 +137,26 @@ export const getTimeSummaryTool = {
         ? `\nPeriod: ${startDate ? startDate.toLocaleDateString() : 'Beginning'} - ${endDate ? endDate.toLocaleDateString() : 'Today'}`
         : '';
 
-      const summaryList = summary.map(item => 
-        `- ${item.clientName} > ${item.projectName}: ${item.totalHours}h (${item.entryCount} entries)`
+      // node-postgres returns the numeric and bigint aggregates as strings;
+      // the output schema requires numbers.
+      const items: TimeSummaryItem[] = summary.map(item => ({
+        clientName: item.clientName,
+        projectName: item.projectName,
+        totalHours: Number(item.totalHours),
+        entryCount: Number(item.entryCount),
+      }));
+
+      const summaryList = items.map(item =>
+        `- ${item.clientName} > ${item.projectName}: ${item.totalHours.toFixed(2)}h (${item.entryCount} entries)`
       ).join('\n');
 
-      const totalHours = summary.reduce((acc, item) => acc + Number(item.totalHours), 0);
-      const totalEntries = summary.reduce((acc, item) => acc + Number(item.entryCount), 0);
+      const totalHours = items.reduce((acc, item) => acc + item.totalHours, 0);
+      const totalEntries = items.reduce((acc, item) => acc + item.entryCount, 0);
 
       return createStructuredMcpResponse(
         `Time Summary${dateRange}:\n\n${summaryList}\n\nTotal: ${totalHours.toFixed(2)}h across ${totalEntries} entries` ,
-        { 
-          items: summary,
+        {
+          items,
           totalHours,
           totalEntries,
         }
