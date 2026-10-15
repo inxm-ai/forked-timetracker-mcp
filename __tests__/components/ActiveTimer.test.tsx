@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ActiveTimer from '@/components/dashboard/ActiveTimer'
 import { mockApiResponses } from '../mocks/mock-data'
@@ -39,6 +39,13 @@ describe('ActiveTimer', () => {
     mockFetch.mockClear()
     mockMutate.mockClear()
     mockDispatchEvent.mockClear()
+  })
+
+  // Clock spies and fake timers must not leak into later tests (userEvent hangs
+  // under leftover fake timers).
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.restoreAllMocks()
   })
 
   describe('when no active timer exists', () => {
@@ -85,7 +92,7 @@ describe('ActiveTimer', () => {
       expect(screen.getByRole('button')).toBeInTheDocument()
     })
 
-    it('should display elapsed time', () => {
+    it('should display elapsed time', async () => {
       // Mock current time to be 1 hour after start
       const mockNow = new Date('2024-01-01T11:00:00Z')
       jest.spyOn(Date, 'now').mockReturnValue(mockNow.getTime())
@@ -93,16 +100,15 @@ describe('ActiveTimer', () => {
       render(<ActiveTimer />)
       
       // Wait for the timer to update
-      waitFor(() => {
+      await waitFor(() => {
         expect(screen.getByText('01:00:00')).toBeInTheDocument()
       })
     })
 
-    it('should update elapsed time every second', async () => {
-      jest.useFakeTimers()
-      
-      const mockNow = new Date('2024-01-01T10:30:00Z')
-      jest.spyOn(Date, 'now').mockReturnValue(mockNow.getTime())
+    it('should update elapsed time every second', () => {
+      // Modern fake timers move Date.now() along with advanceTimersByTime;
+      // a Date.now spy would freeze the clock.
+      jest.useFakeTimers({ now: new Date('2024-01-01T10:30:00Z') })
 
       render(<ActiveTimer />)
       
@@ -110,13 +116,11 @@ describe('ActiveTimer', () => {
       expect(screen.getByText('00:30:00')).toBeInTheDocument()
       
       // Advance time by 1 second
-      jest.advanceTimersByTime(1000)
-      
-      await waitFor(() => {
-        expect(screen.getByText('00:30:01')).toBeInTheDocument()
+      act(() => {
+        jest.advanceTimersByTime(1000)
       })
       
-      jest.useRealTimers()
+      expect(screen.getByText('00:30:01')).toBeInTheDocument()
     })
 
     it('should handle stop timer action', async () => {
