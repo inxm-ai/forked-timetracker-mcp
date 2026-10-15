@@ -32,6 +32,8 @@ jest.mock('drizzle-orm', () => ({
   gte: jest.fn(),
   lte: jest.fn(),
   sql: jest.fn(),
+  // drizzle/schema declares its relations at import time
+  relations: jest.fn(),
 }))
 
 // Mock nanoid
@@ -187,9 +189,10 @@ describe('TimeEntryService', () => {
 
       const result = await service.stopTimeTracking(userId)
 
-      expect(result.isActive).toBe(false)
-      expect(result.endTime).toBeTruthy()
-      expect(result.durationMinutes).toBe(120)
+      expect(result).not.toBeNull()
+      expect(result?.isActive).toBe(false)
+      expect(result?.endTime).toBeTruthy()
+      expect(result?.durationMinutes).toBe(120)
     })
 
     it('should stop specific time entry by ID', async () => {
@@ -223,8 +226,9 @@ describe('TimeEntryService', () => {
 
       const result = await service.stopTimeTracking(userId, entryId)
 
-      expect(result.isActive).toBe(false)
-      expect(result.durationMinutes).toBe(90)
+      expect(result).not.toBeNull()
+      expect(result?.isActive).toBe(false)
+      expect(result?.durationMinutes).toBe(90)
     })
 
     it('should throw error when no active entry found', async () => {
