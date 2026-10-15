@@ -13,6 +13,13 @@ jest.mock('swr', () => ({
 
 const mockMutate = require('swr').mutate
 
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 // Mock fetch
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -27,16 +34,37 @@ jest.mock('date-fns', () => ({
   }),
 }))
 
-// Mock URL constructor
-global.URL = class MockURL {
-  searchParams: URLSearchParams
-  constructor(url: string) {
-    this.searchParams = new URLSearchParams()
-  }
-} as any
+type SWRState = { data: unknown; error: Error | null; isLoading: boolean }
+
+const loaded = (data: unknown): SWRState => ({ data, error: null, isLoading: false })
+const EMPTY: SWRState = loaded(null)
 
 describe('EnhancedTimeEntriesList', () => {
   const mockSWR = require('swr').default
+
+  // The component calls useSWR for each key on every render, so answer by key
+  // (as SWR does) instead of by call order.
+  const mockSWRResponses = (responses: {
+    entries?: SWRState
+    projects?: SWRState
+    users?: SWRState
+    active?: SWRState
+  }) => {
+    mockSWR.mockImplementation((key: string) => {
+      if (key === '/api/projects') return responses.projects ?? EMPTY
+      if (key === '/api/users') return responses.users ?? EMPTY
+      if (key === '/api/time-entries/active') return responses.active ?? EMPTY
+      if (key.startsWith('/api/time-entries')) return responses.entries ?? EMPTY
+      return EMPTY
+    })
+  }
+
+  const mockLoadedData = () =>
+    mockSWRResponses({
+      entries: loaded(mockApiResponses.timeEntries),
+      projects: loaded(mockApiResponses.projects),
+      users: loaded(mockApiResponses.users),
+    })
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -44,30 +72,14 @@ describe('EnhancedTimeEntriesList', () => {
     mockMutate.mockClear()
   })
 
+  // Spies on document/window must not leak into later tests.
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   describe('in dashboard mode', () => {
     beforeEach(() => {
-      // Mock SWR calls for dashboard mode
-      mockSWR
-        .mockReturnValueOnce({
-          data: mockApiResponses.timeEntries,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.projects,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.users,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: false,
-        })
+      mockLoadedData()
     })
 
     it('should render in dashboard mode', () => {
@@ -94,45 +106,18 @@ describe('EnhancedTimeEntriesList', () => {
     it('should handle View All Reports button click', async () => {
       const user = userEvent.setup()
       
-      // Mock window.location
-      Object.defineProperty(window, 'location', {
-        value: { href: '' },
-        writable: true,
-      })
-
       render(<EnhancedTimeEntriesList mode="dashboard" />)
       
       const viewAllButton = screen.getByText('View All Reports')
       await user.click(viewAllButton)
 
-      expect(window.location.href).toBe('/reports')
+      expect(mockPush).toHaveBeenCalledWith('/reports')
     })
   })
 
   describe('in full mode', () => {
     beforeEach(() => {
-      // Mock SWR calls for full mode
-      mockSWR
-        .mockReturnValueOnce({
-          data: mockApiResponses.timeEntries,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.projects,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.users,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: false,
-        })
+      mockLoadedData()
     })
 
     it('should render in full mode', () => {
@@ -187,41 +172,26 @@ describe('EnhancedTimeEntriesList', () => {
     it('should handle export functionality', async () => {
       const user = userEvent.setup()
       
-      // Mock fetch for export
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockApiResponses.timeEntries,
-      })
+      // Hold the export fetch open so the in-progress state can be observed
+      let resolveExportFetch: (response: unknown) => void = () => {}
+      mockFetch.mockReturnValueOnce(new Promise((resolve) => { resolveExportFetch = resolve }))
 
-      // Mock URL.createObjectURL and document.createElement
+      // jsdom has no URL.createObjectURL / revokeObjectURL
       const mockCreateObjectURL = jest.fn().mockReturnValue('blob:url')
       const mockRevokeObjectURL = jest.fn()
-      global.URL.createObjectURL = mockCreateObjectURL
-      global.URL.revokeObjectURL = mockRevokeObjectURL
-
-      const mockLink = {
-        setAttribute: jest.fn(),
-        style: { visibility: '' },
-        click: jest.fn(),
-      }
-      const mockCreateElement = jest.fn().mockReturnValue(mockLink)
-      const mockAppendChild = jest.fn()
-      const mockRemoveChild = jest.fn()
-      
-      Object.defineProperty(document, 'createElement', {
-        value: mockCreateElement,
-        writable: true,
-      })
-      Object.defineProperty(document.body, 'appendChild', {
-        value: mockAppendChild,
-        writable: true,
-      })
-      Object.defineProperty(document.body, 'removeChild', {
-        value: mockRemoveChild,
-        writable: true,
-      })
+      Object.defineProperty(URL, 'createObjectURL', { value: mockCreateObjectURL, configurable: true })
+      Object.defineProperty(URL, 'revokeObjectURL', { value: mockRevokeObjectURL, configurable: true })
 
       render(<EnhancedTimeEntriesList mode="full" />)
+
+      // Capture the download link the component creates; everything else is real DOM.
+      const realCreateElement = document.createElement.bind(document)
+      const mockLink = realCreateElement('a')
+      const mockClick = jest.spyOn(mockLink, 'click').mockImplementation(() => {})
+      jest.spyOn(document, 'createElement').mockImplementation(
+        (tagName: string, options?: ElementCreationOptions) =>
+          tagName === 'a' ? mockLink : realCreateElement(tagName, options)
+      )
       
       const exportButton = screen.getByText('Export')
       await user.click(exportButton)
@@ -229,14 +199,26 @@ describe('EnhancedTimeEntriesList', () => {
       // Should show loading state
       expect(screen.getByText('Exporting...')).toBeInTheDocument()
 
+      resolveExportFetch({
+        ok: true,
+        json: async () => mockApiResponses.timeEntries,
+      })
+
       await waitFor(() => {
         expect(mockCreateObjectURL).toHaveBeenCalled()
-        expect(mockLink.click).toHaveBeenCalled()
+        expect(mockClick).toHaveBeenCalled()
         expect(mockRevokeObjectURL).toHaveBeenCalled()
       })
     })
 
     it('should show pagination controls', () => {
+      // Pagination renders only with more than one page (10 per page by default)
+      mockSWRResponses({
+        entries: loaded({ ...mockApiResponses.timeEntries, total: 25 }),
+        projects: loaded(mockApiResponses.projects),
+        users: loaded(mockApiResponses.users),
+      })
+
       render(<EnhancedTimeEntriesList mode="full" />)
       
       expect(screen.getByText('per page')).toBeInTheDocument()
@@ -247,27 +229,7 @@ describe('EnhancedTimeEntriesList', () => {
 
   describe('timer interactions', () => {
     beforeEach(() => {
-      mockSWR
-        .mockReturnValueOnce({
-          data: mockApiResponses.timeEntries,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.projects,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.users,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: false,
-        })
+      mockLoadedData()
     })
 
     it('should handle start timer action', async () => {
@@ -288,25 +250,18 @@ describe('EnhancedTimeEntriesList', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          projectId: expect.any(String),
-          description: expect.any(String),
-        }),
+        body: expect.any(String),
+      })
+      const [, request] = mockFetch.mock.calls[0]
+      expect(JSON.parse(request.body)).toEqual({
+        projectId: 'test-project-1',
+        description: 'Working on homepage',
       })
     })
 
     it('should listen for timerStopped events', () => {
-      const mockAddEventListener = jest.fn()
-      const mockRemoveEventListener = jest.fn()
-      
-      Object.defineProperty(window, 'addEventListener', {
-        value: mockAddEventListener,
-        writable: true,
-      })
-      Object.defineProperty(window, 'removeEventListener', {
-        value: mockRemoveEventListener,
-        writable: true,
-      })
+      const mockAddEventListener = jest.spyOn(window, 'addEventListener')
+      const mockRemoveEventListener = jest.spyOn(window, 'removeEventListener')
 
       const { unmount } = render(<EnhancedTimeEntriesList mode="full" />)
       
@@ -320,22 +275,8 @@ describe('EnhancedTimeEntriesList', () => {
 
   describe('loading and error states', () => {
     it('should show loading state', () => {
-      mockSWR
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: true,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: true,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: true,
-        })
+      const loading: SWRState = { data: null, error: null, isLoading: true }
+      mockSWRResponses({ entries: loading, projects: loading, users: loading })
 
       render(<EnhancedTimeEntriesList />)
       
@@ -343,22 +284,8 @@ describe('EnhancedTimeEntriesList', () => {
     })
 
     it('should show error state', () => {
-      mockSWR
-        .mockReturnValueOnce({
-          data: null,
-          error: new Error('Network error'),
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: new Error('Network error'),
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: new Error('Network error'),
-          isLoading: false,
-        })
+      const failed: SWRState = { data: null, error: new Error('Network error'), isLoading: false }
+      mockSWRResponses({ entries: failed, projects: failed, users: failed })
 
       render(<EnhancedTimeEntriesList />)
       
@@ -366,27 +293,11 @@ describe('EnhancedTimeEntriesList', () => {
     })
 
     it('should show empty state', () => {
-      mockSWR
-        .mockReturnValueOnce({
-          data: { entries: [], total: 0 },
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: [],
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: [],
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: false,
-        })
+      mockSWRResponses({
+        entries: loaded({ entries: [], total: 0 }),
+        projects: loaded([]),
+        users: loaded([]),
+      })
 
       render(<EnhancedTimeEntriesList />)
       
@@ -396,9 +307,8 @@ describe('EnhancedTimeEntriesList', () => {
 
   describe('utility functions', () => {
     it('should format duration correctly', () => {
-      mockSWR
-        .mockReturnValueOnce({
-          data: {
+      mockSWRResponses({
+        entries: loaded({
             entries: [{
               id: 'test-1',
               projectId: 'proj-1',
@@ -412,25 +322,10 @@ describe('EnhancedTimeEntriesList', () => {
               isActive: false,
             }],
             total: 1,
-          },
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.projects,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: mockApiResponses.users,
-          error: null,
-          isLoading: false,
-        })
-        .mockReturnValueOnce({
-          data: null,
-          error: null,
-          isLoading: false,
-        })
+          }),
+        projects: loaded(mockApiResponses.projects),
+        users: loaded(mockApiResponses.users),
+      })
 
       render(<EnhancedTimeEntriesList />)
       
