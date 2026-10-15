@@ -1,6 +1,7 @@
 import { TimeEntryService } from '@/lib/services/time-entries'
 import { mockTimeEntry, mockProject } from '../utils/test-helpers'
 import { mockTimeEntries, mockProjects } from '../mocks/mock-data'
+import { projects } from '@/drizzle/schema'
 
 // Mock the database connection
 jest.mock('@/drizzle/connection', () => ({
@@ -47,6 +48,62 @@ describe('TimeEntryService', () => {
   beforeEach(() => {
     service = new TimeEntryService()
     jest.clearAllMocks()
+  })
+
+  // Clients and projects are shared across users (README, list_projects): any
+  // user may track time on any project, as the web app's POST /api/time-entries
+  // already allows. The project lookup must not filter by the project's creator.
+  describe('time on shared projects', () => {
+    const { eq } = jest.requireMock<{ eq: jest.Mock }>('drizzle-orm')
+    const sharedProject = mockProject({ id: 'shared-project', userId: 'project-creator' })
+
+    const resolveSelectOnce = (rows: unknown[]) => {
+      mockDb.select.mockImplementationOnce(() => ({
+        ...mockDb,
+        from: () => ({
+          ...mockDb,
+          where: () => ({
+            ...mockDb,
+            limit: () => Promise.resolve(rows)
+          })
+        })
+      }))
+    }
+
+    it('starts a timer on a project another user created', async () => {
+      resolveSelectOnce([sharedProject]) // project lookup
+      resolveSelectOnce([]) // no active entry
+      mockDb.insert.mockImplementation(() => mockDb)
+      mockDb.values.mockImplementation(() => mockDb)
+      mockDb.returning.mockImplementation(() =>
+        Promise.resolve([mockTimeEntry({ userId: 'team-member', projectId: 'shared-project', isActive: true })])
+      )
+
+      const result = await service.startTimeTracking('team-member', 'shared-project', 'pairing')
+
+      expect(result.userId).toBe('team-member')
+      expect(eq).not.toHaveBeenCalledWith(projects.userId, expect.anything())
+    })
+
+    it('adds a manual entry on a project another user created', async () => {
+      resolveSelectOnce([sharedProject]) // project lookup
+      mockDb.insert.mockImplementation(() => mockDb)
+      mockDb.values.mockImplementation(() => mockDb)
+      mockDb.returning.mockImplementation(() =>
+        Promise.resolve([mockTimeEntry({ userId: 'team-member', projectId: 'shared-project', isActive: false })])
+      )
+
+      const result = await service.addManualTimeEntry(
+        'team-member',
+        'shared-project',
+        'review',
+        new Date('2024-01-01T10:00:00Z'),
+        new Date('2024-01-01T11:00:00Z')
+      )
+
+      expect(result.userId).toBe('team-member')
+      expect(eq).not.toHaveBeenCalledWith(projects.userId, expect.anything())
+    })
   })
 
   describe('startTimeTracking', () => {
@@ -120,7 +177,7 @@ describe('TimeEntryService', () => {
 
       await expect(
         service.startTimeTracking(userId, projectId, description)
-      ).rejects.toThrow('Project not found or does not belong to user')
+      ).rejects.toThrow('Project not found')
     })
 
     it('should throw error when active entry already exists', async () => {
@@ -364,7 +421,7 @@ describe('TimeEntryService', () => {
 
       await expect(
         service.addManualTimeEntry(userId, projectId, description, startTime, endTime)
-      ).rejects.toThrow('Project not found or does not belong to user')
+      ).rejects.toThrow('Project not found')
     })
 
     it('should throw error when end time is before start time', async () => {
