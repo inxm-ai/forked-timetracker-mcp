@@ -60,6 +60,10 @@ export class ProjectService {
     projectId: string, 
     data: Partial<Omit<Project, 'id' | 'userId' | 'createdAt'>>
   ): Promise<Project | null> {
+    if (data.active === false) {
+      await this.assertNoTrackedTime(projectId);
+    }
+
     // If clientId is being updated, verify it exists
     if (data.clientId) {
       const [client] = await db
@@ -88,7 +92,12 @@ export class ProjectService {
   }
 
   async deactivateProject(userId: string, projectId: string): Promise<Project | null> {
-    // Check if project has any time entries
+    return this.updateProject(userId, projectId, { active: false });
+  }
+
+  // Deactivation (deactivate_project, or update_project with active: false) is
+  // refused once time has been tracked on the project.
+  private async assertNoTrackedTime(projectId: string): Promise<void> {
     const [timeEntry] = await db
       .select()
       .from(timeEntries)
@@ -98,8 +107,6 @@ export class ProjectService {
     if (timeEntry) {
       throw new Error('Cannot deactivate project that has tracked time entries. Please contact an administrator if you need to deactivate this project.');
     }
-
-    return this.updateProject(userId, projectId, { active: false });
   }
 
   async deleteProject(userId: string, projectId: string): Promise<boolean> {
