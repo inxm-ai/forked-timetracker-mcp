@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -141,6 +142,7 @@ interface EnhancedTimeEntriesListProps {
 }
 
 export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10 }: EnhancedTimeEntriesListProps = {}) {
+  const router = useRouter();
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
@@ -449,7 +451,7 @@ export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center" role="status" aria-label="Loading time entries">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         </CardContent>
@@ -491,7 +493,7 @@ export default function EnhancedTimeEntriesList({ mode = 'full', maxEntries = 10
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => window.location.href = '/reports'}
+                onClick={() => router.push('/reports')}
                 className="flex items-center gap-2"
               >
                 <BarChart3 className="h-4 w-4" />
