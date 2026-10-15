@@ -1,12 +1,15 @@
 import { NextRequest } from "next/server";
-import { getUserIdOrThrow } from "@/lib/authUtils";
+import { getAuthenticatedUser } from "@/lib/authUtils";
 import { db } from "@/drizzle/connection";
 import { timeEntries, user } from "@/drizzle/schema";
 import { sql, eq } from "drizzle-orm";
+import { createAuthorizationContext, canViewUserTimesheets } from "@/lib/authorization";
 
 export async function GET(req: NextRequest) {
   try {
-    const currentUserId = await getUserIdOrThrow(req);
+    const currentUser = await getAuthenticatedUser(req);
+    const currentUserId = currentUser.userId;
+    const authContext = createAuthorizationContext(currentUserId, currentUser.role);
     
     // Get all unique user IDs from time entries with user info from Better Auth
     const users = await db
@@ -22,13 +25,20 @@ export async function GET(req: NextRequest) {
       .groupBy(timeEntries.userId, user.name, user.email, user.image)
       .orderBy(timeEntries.userId);
 
+    // Only offer users whose timesheets the caller may view (the same rule
+    // /api/time-entries enforces), so the user filter never offers a 403.
+    const visibleUsers = users.filter(
+      (row) => canViewUserTimesheets(authContext, row.userId).authorized
+    );
+
     // Convert to more user-friendly format
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = visibleUsers.map(user => ({
       id: user.userId,
       name: user.userName || getUserDisplayName(user.userId, currentUserId),
       email: user.userEmail || getUserEmail(user.userId, currentUserId),
       image: user.userImage || getUserImage(user.userId, currentUserId),
-      entryCount: user.entryCount,
+      // node-postgres returns count(*) as a string
+      entryCount: Number(user.entryCount),
     }));
 
     return Response.json(formattedUsers);
