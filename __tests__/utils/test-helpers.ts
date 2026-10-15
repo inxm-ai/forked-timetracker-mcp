@@ -1,12 +1,17 @@
+import type { NextRequest } from 'next/server'
 import { createRequest, createResponse } from 'node-mocks-http'
 
+// Route handlers are typed to take a NextRequest. jest.setup.js replaces the
+// global Request with a mock that NextRequest cannot extend, so build that mock
+// and type it for the routes, which only use the Request API (url, method,
+// headers, json()).
 export const createMockRequest = (
   method: string = 'GET',
   url: string = '/api/test',
-  body?: any,
+  body?: unknown,
   headers?: Record<string, string>
-) => {
-  return new Request(url, {
+): NextRequest => {
+  const request = new Request(url, {
     method,
     headers: {
       'content-type': 'application/json',
@@ -14,6 +19,7 @@ export const createMockRequest = (
     },
     body: body ? JSON.stringify(body) : undefined,
   })
+  return request as unknown as NextRequest
 }
 
 export const createMockResponse = () => {
