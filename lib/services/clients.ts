@@ -45,6 +45,10 @@ export class ClientService {
     clientId: string, 
     data: Partial<Omit<Client, 'id' | 'userId' | 'createdAt'>>
   ): Promise<Client | null> {
+    if (data.active === false) {
+      await this.assertNoTrackedTime(clientId);
+    }
+
     const updateData = {
       ...data,
       updatedAt: new Date(),
@@ -60,7 +64,12 @@ export class ClientService {
   }
 
   async deactivateClient(userId: string, clientId: string): Promise<Client | null> {
-    // Check if client has any time entries through its projects
+    return this.updateClient(userId, clientId, { active: false });
+  }
+
+  // Deactivation (deactivate_client, or update_client with active: false) is
+  // refused once time has been tracked on any of the client's projects.
+  private async assertNoTrackedTime(clientId: string): Promise<void> {
     const timeEntriesCount = await db
       .select()
       .from(timeEntries)
@@ -71,8 +80,6 @@ export class ClientService {
     if (timeEntriesCount.length > 0) {
       throw new Error('Cannot deactivate client that has tracked time entries. Please contact an administrator if you need to deactivate this client.');
     }
-
-    return this.updateClient(userId, clientId, { active: false });
   }
 
   async deleteClient(userId: string, clientId: string): Promise<boolean> {
