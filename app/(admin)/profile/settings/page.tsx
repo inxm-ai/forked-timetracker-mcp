@@ -18,10 +18,13 @@ import {
   Lock
 } from 'lucide-react';
 import AdminHeader from '@/components/navigation/AdminHeader';
+import ManagedAccount from '@/components/profile/ManagedAccount';
+import { useUnifiedSession } from '@/lib/hooks/useUnifiedSession';
 
 export default function ProfileSettings() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
+  const { data: unifiedSession, mode } = useUnifiedSession();
   
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -83,6 +86,11 @@ export default function ProfileSettings() {
       setIsLoading(false);
     }
   };
+
+  // Proxy mode has no Better Auth session; the identity provider owns the password.
+  if (mode === 'proxy') {
+    return unifiedSession ? <ManagedAccount user={unifiedSession.user} title="Security Settings" /> : null;
+  }
 
   if (!session?.user) return null;
 
