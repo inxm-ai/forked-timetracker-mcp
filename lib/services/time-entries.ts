@@ -10,15 +10,15 @@ export class TimeEntryService {
     projectId: string, 
     description: string
   ): Promise<TimeEntry> {
-    // Verify project belongs to user
+    // Projects are shared: any user may track time on any project.
     const [project] = await db
       .select()
       .from(projects)
-      .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+      .where(eq(projects.id, projectId))
       .limit(1);
 
     if (!project) {
-      throw new Error('Project not found or does not belong to user');
+      throw new Error('Project not found');
     }
 
     // Check if there's already an active time entry
@@ -102,15 +102,15 @@ export class TimeEntryService {
     startTime: Date,
     endTime: Date
   ): Promise<TimeEntry> {
-    // Verify project belongs to user
+    // Projects are shared: any user may track time on any project.
     const [project] = await db
       .select()
       .from(projects)
-      .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+      .where(eq(projects.id, projectId))
       .limit(1);
 
     if (!project) {
-      throw new Error('Project not found or does not belong to user');
+      throw new Error('Project not found');
     }
 
     if (endTime <= startTime) {
